@@ -1162,7 +1162,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v28</div>
+<div class="version-badge">v29</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -1671,10 +1671,11 @@
           1. Supabase-Projekt erstellen: <a href="https://supabase.com" target="_blank" class="sync-link">supabase.com</a> (kostenlos)<br>
           2. Im SQL-Editor das Setup-Script ausführen (Schaltfläche unten)<br>
           3. Project URL &amp; anon key hier eintragen (unter Project Settings → API)<br>
-          4. Für jeden Mitarbeiter im Auth-Dashboard einen Benutzer anlegen:<br>
-          &nbsp;&nbsp;· Email: <code>code@blitz.internal</code> (z.B. lukas@blitz.internal)<br>
-          &nbsp;&nbsp;· Passwort: der Code selbst (z.B. lukas)<br>
-          &nbsp;&nbsp;· Danach in der <code>profiles</code>-Tabelle eine Zeile eintragen
+          4. Für jeden Mitarbeiter im <strong>Table Editor → profiles → Insert row</strong>:<br>
+          &nbsp;&nbsp;· <code>code</code>: z.B. <code>lukas</code> (wird zum Einloggen verwendet)<br>
+          &nbsp;&nbsp;· <code>name</code>: z.B. <code>Lukas</code><br>
+          &nbsp;&nbsp;· <code>role</code>: <code>admin</code> (Chef) oder <code>worker</code> (Mitarbeiter)<br>
+          &nbsp;&nbsp;· <code>id</code>: leer lassen (wird automatisch vergeben)
         </div>
         <button class="btn-ghost" style="margin-top:0.75rem;font-size:0.72rem" onclick="showSqlScript()">📋 SQL-Script anzeigen</button>
         <div id="sqlScriptOut" style="display:none;margin-top:0.75rem;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0.75rem;font-size:0.62rem;color:var(--muted);white-space:pre;overflow-x:auto;line-height:1.6"></div>
@@ -2895,7 +2896,7 @@ function showSqlScript() {
 -- Im Supabase SQL-Editor ausführen
 
 create table profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
   code text unique not null,
   name text not null,
   role text not null default 'worker'
@@ -2926,56 +2927,39 @@ create table locations (
   customer_id text, name text not null
 );
 
--- Enable RLS
+-- RLS: anon key darf lesen/schreiben (App nutzt anon key)
 alter table profiles enable row level security;
 alter table entries enable row level security;
 alter table customers enable row level security;
 alter table locations enable row level security;
 
--- Profiles: everyone reads own, admin reads all
-create policy "profiles_access" on profiles for all using (
-  auth.uid() = id or
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
+create policy "allow_all_profiles"  on profiles  for all using (true) with check (true);
+create policy "allow_all_entries"   on entries   for all using (true) with check (true);
+create policy "allow_all_customers" on customers for all using (true) with check (true);
+create policy "allow_all_locations" on locations for all using (true) with check (true);
 
--- Entries: own data + admin reads all
-create policy "entries_access" on entries for all using (
-  auth.uid() = user_id or
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-
--- Customers: own data only
-create policy "customers_access" on customers for all using (auth.uid() = user_id);
-
--- Locations: own data only
-create policy "locations_access" on locations for all using (auth.uid() = user_id);
-
--- Enable realtime for entries
+-- Realtime aktivieren
 alter publication supabase_realtime add table entries;`;
   el.style.display = '';
 }
 
-// Restore session on startup
-(async function restoreSession() {
+// Restore session from localStorage (no Supabase Auth needed)
+(function restoreSession() {
   const sb = getSupabase();
-  if (!sb) { renderSyncPage(); return; }
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  const savedCode = localStorage.getItem('blitz_user_code');
+  const savedId   = localStorage.getItem('blitz_user_id');
+  if (!sb || !savedCode || !savedId) { renderSyncPage(); return; }
+  sb.from('profiles').select('*').eq('code', savedCode).single().then(({ data: profile }) => {
     if (profile) {
-      currentUser = { id: session.user.id, code: profile.code, name: profile.name, role: profile.role };
-      updateAdminUI();
-      updateSyncTab();
-      renderSyncPage();
-      await syncPull();
-      renderEntries();
-      renderSaldo();
-      populateAllSelects();
+      currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role };
+      updateAdminUI(); updateSyncTab(); renderSyncPage();
+      syncPull().then(() => { renderEntries(); renderSaldo(); populateAllSelects(); });
       setupRealtimeSync();
-      return;
+    } else {
+      localStorage.removeItem('blitz_user_code'); localStorage.removeItem('blitz_user_id');
+      renderSyncPage();
     }
-  }
-  renderSyncPage();
+  });
 })();
 
 function setSyncStatus(state, text, sub) {
@@ -3041,14 +3025,11 @@ async function loginWithCode() {
   if (!sb) return;
   setSyncStatus('busy', 'Anmelden…');
   try {
-    const { data: authData, error } = await sb.auth.signInWithPassword({
-      email: `${code}@blitz.internal`, password: code
-    });
-    if (error) throw new Error('Ungültiger Code: ' + error.message);
-    const { data: profile, error: pErr } = await sb.from('profiles').select('*').eq('id', authData.user.id).single();
-    if (pErr || !profile) throw new Error('Profil nicht gefunden – Administrator kontaktieren');
-    currentUser = { id: authData.user.id, code: profile.code, name: profile.name, role: profile.role };
+    const { data: profile, error } = await sb.from('profiles').select('*').eq('code', code).single();
+    if (error || !profile) throw new Error('Unbekannter Code – bitte Administrator kontaktieren');
+    currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role };
     localStorage.setItem('blitz_user_code', code);
+    localStorage.setItem('blitz_user_id', profile.id);
     if (data.entries.length > 0 || data.customers.length > 0) await syncPush();
     await syncPull();
     setupRealtimeSync();
@@ -3065,15 +3046,13 @@ async function loginWithCode() {
   }
 }
 
-async function logout() {
+function logout() {
   if (!confirm('Abmelden? Lokale Daten bleiben erhalten.')) return;
   const sb = getSupabase();
-  if (sb) {
-    await sb.auth.signOut();
-    if (_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
-  }
+  if (sb && _realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
   currentUser = null;
   localStorage.removeItem('blitz_user_code');
+  localStorage.removeItem('blitz_user_id');
   setSyncStatus('idle', 'Nicht angemeldet');
   updateSyncTab();
   renderSyncPage();
