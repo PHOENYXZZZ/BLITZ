@@ -1171,7 +1171,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v38</div>
+<div class="version-badge">v39</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -1702,9 +1702,9 @@
     <!-- Step 2: Login with code -->
     <div id="syncLogin" class="panel panel-accent" style="display:none">
       <div class="panel-title">🔑 Anmelden</div>
-      <div class="sync-step-desc" style="margin-bottom:0.75rem">Gib deinen Zugangscode ein (wird von deinem Chef vergeben).</div>
+      <div class="sync-step-desc" style="margin-bottom:0.75rem">Gib deinen Zugangscode ein (wird vom Admin vergeben).</div>
       <div class="add-row" style="gap:0.5rem">
-        <input type="text" id="codeInput" placeholder="Zugangscode (z.B. lukas)" style="flex:1;text-transform:lowercase" autocomplete="off" autocapitalize="none" onkeydown="if(event.key==='Enter')loginWithCode()">
+        <input type="text" id="codeInput" placeholder="Zugangscode (z.B. 4729103856)" style="flex:1;text-transform:lowercase" autocomplete="off" autocapitalize="none" onkeydown="if(event.key==='Enter')loginWithCode()">
         <button class="btn-primary" onclick="loginWithCode()">Anmelden</button>
       </div>
       <div id="loginError" style="color:var(--red);font-size:0.72rem;margin-top:0.5rem;display:none"></div>
@@ -1747,7 +1747,7 @@
     <div class="panel">
       <div class="panel-title">Benutzer anlegen</div>
       <div style="display:flex;flex-direction:column;gap:0.6rem">
-        <input type="text" id="newUserCode" placeholder="Code (z.B. thomas)" autocapitalize="none" autocomplete="off" style="text-transform:lowercase">
+        <input type="text" id="newUserCode" placeholder="Code (z.B. 4729103856)" autocapitalize="none" autocomplete="off" style="text-transform:lowercase">
         <input type="text" id="newUserName" placeholder="Name (z.B. Thomas)" autocomplete="off">
         <select id="newUserRole">
           <option value="worker">Mitarbeiter</option>
