@@ -3022,7 +3022,7 @@ async function setupGistSync() {
     if (existing) {
       syncGistId = existing.id;
       localStorage.setItem('zeitwerk_gist_id', syncGistId);
-      await syncPull();
+      await syncNow(); // pull then push so local tombstones propagate to Gist
     } else {
       const created = await gistRequest('POST', '/gists', {
         description: 'Zeitwerk – Arbeitszeiterfassung',
@@ -3131,7 +3131,7 @@ async function connectExistingGist() {
   try {
     syncGistId = id;
     localStorage.setItem('zeitwerk_gist_id', syncGistId);
-    await syncPull();
+    await syncNow(); // pull then push so local tombstones propagate to Gist
     updateSyncTab();
     renderSyncPage();
   } catch(e) {
@@ -3324,19 +3324,19 @@ updateSyncTab();
 initPinLock();
 initQuickEntry();
 
-// Auto-pull on startup if sync configured
+// Auto-sync on startup if sync configured (pull then push so tombstones propagate)
 if (syncToken && syncGistId) {
   setSyncStatus('busy', 'Synchronisiere…');
-  syncPull().then(() => {
+  syncNow().then(() => {
     populateAllSelects();
     renderEntries();
     renderSaldo();
   });
 }
 
-// Auto-pull every 2 minutes while app is open
+// Auto-sync every 2 minutes while app is open
 setInterval(() => {
-  if (syncToken && syncGistId && !syncBusy) syncPull();
+  if (syncToken && syncGistId && !syncBusy) syncNow();
 }, 2 * 60 * 1000);
 
 // ============================================================
