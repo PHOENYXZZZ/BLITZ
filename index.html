@@ -1163,7 +1163,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v40</div>
+<div class="version-badge">v41</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -1243,8 +1243,14 @@
       </div>
       <div class="field" id="quickLocWrap" style="display:none">
         <label>Standort</label>
-        <input type="text" id="quickLocInput" list="quickLocList" placeholder="Standort wählen oder neu eingeben">
-        <datalist id="quickLocList"></datalist>
+        <select id="quickLocSel" onchange="onQuickLocChange()">
+          <option value="">– Standort wählen –</option>
+          <option value="__new__">+ Neuer Standort…</option>
+        </select>
+      </div>
+      <div class="field" id="quickNewLocWrap" style="display:none">
+        <label>Neuer Standortname</label>
+        <input type="text" id="quickNewLocInput" placeholder="z.B. Lager Wien">
       </div>
     </div>
 
@@ -1664,33 +1670,6 @@
       <span id="syncLastSync" style="margin-left:auto;font-size:0.65rem;color:var(--muted)"></span>
     </div>
 
-    <!-- Step 1: Supabase not configured yet -->
-    <div id="syncSetupSupabase" class="panel panel-accent" style="display:none">
-      <div class="panel-title">⚙️ Supabase einrichten</div>
-      <div class="sync-step-desc" style="margin-bottom:1rem">Einmalig: Trage hier die Zugangsdaten deines Supabase-Projekts ein. Diese werden nur lokal gespeichert.</div>
-      <div style="display:flex;flex-direction:column;gap:0.6rem">
-        <input type="text" id="supabaseUrlInput" placeholder="https://xxxx.supabase.co" style="width:100%" autocomplete="off">
-        <input type="text" id="supabaseKeyInput" placeholder="Anon/Public Key (eyJ...)" style="width:100%" autocomplete="off">
-        <button class="btn-primary" onclick="saveSupabaseConfig()">Speichern & weiter</button>
-      </div>
-      <div id="supabaseConfigError" style="color:var(--red);font-size:0.72rem;margin-top:0.5rem;display:none"></div>
-      <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
-        <div style="font-size:0.72rem;color:var(--muted);line-height:1.8">
-          <strong style="color:var(--text)">Setup-Anleitung:</strong><br>
-          1. Supabase-Projekt erstellen: <a href="https://supabase.com" target="_blank" class="sync-link">supabase.com</a> (kostenlos)<br>
-          2. Im SQL-Editor das Setup-Script ausführen (Schaltfläche unten)<br>
-          3. Project URL &amp; anon key hier eintragen (unter Project Settings → API)<br>
-          4. Für jeden Mitarbeiter im <strong>Table Editor → profiles → Insert row</strong>:<br>
-          &nbsp;&nbsp;· <code>code</code>: z.B. <code>lukas</code> (wird zum Einloggen verwendet)<br>
-          &nbsp;&nbsp;· <code>name</code>: z.B. <code>Lukas</code><br>
-          &nbsp;&nbsp;· <code>role</code>: <code>admin</code> (Chef) oder <code>worker</code> (Mitarbeiter)<br>
-          &nbsp;&nbsp;· <code>id</code>: leer lassen (wird automatisch vergeben)
-        </div>
-        <button class="btn-ghost" style="margin-top:0.75rem;font-size:0.72rem" onclick="showSqlScript()">📋 SQL-Script anzeigen</button>
-        <div id="sqlScriptOut" style="display:none;margin-top:0.75rem;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0.75rem;font-size:0.62rem;color:var(--muted);white-space:pre;overflow-x:auto;line-height:1.6"></div>
-      </div>
-    </div>
-
     <!-- Step 2: Login with code -->
     <div id="syncLogin" class="panel panel-accent" style="display:none">
       <div class="panel-title">🔑 Anmelden</div>
@@ -1700,9 +1679,6 @@
         <button class="btn-primary" onclick="loginWithCode()">Anmelden</button>
       </div>
       <div id="loginError" style="color:var(--red);font-size:0.72rem;margin-top:0.5rem;display:none"></div>
-      <div style="margin-top:0.75rem">
-        <button class="btn-ghost" style="font-size:0.72rem" onclick="resetSupabaseConfig()">⚙️ Supabase-Konfiguration ändern</button>
-      </div>
     </div>
 
     <!-- Step 3: Connected -->
@@ -2903,60 +2879,6 @@ function getSupabase() {
 }
 
 
-function showSqlScript() {
-  const el = document.getElementById('sqlScriptOut');
-  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
-  el.textContent = `-- BLITZ Supabase Setup Script
--- Im Supabase SQL-Editor ausführen
-
-create table profiles (
-  id uuid primary key default gen_random_uuid(),
-  code text unique not null,
-  name text not null,
-  role text not null default 'worker'
-);
-
-create table entries (
-  id text primary key,
-  user_id uuid not null references profiles(id) on delete cascade,
-  date text not null,
-  from_time text, to_time text, break_min integer default 0,
-  customer_id text, customer_name text,
-  location_id text, location_name text,
-  task text, title text, note text,
-  transferred boolean default false,
-  deleted boolean default false,
-  updated_at timestamptz default now()
-);
-
-create table customers (
-  id text primary key,
-  user_id uuid not null references profiles(id) on delete cascade,
-  name text not null
-);
-
-create table locations (
-  id text primary key,
-  user_id uuid not null references profiles(id) on delete cascade,
-  customer_id text, name text not null
-);
-
--- RLS: anon key darf lesen/schreiben (App nutzt anon key)
-alter table profiles enable row level security;
-alter table entries enable row level security;
-alter table customers enable row level security;
-alter table locations enable row level security;
-
-create policy "allow_all_profiles"  on profiles  for all using (true) with check (true);
-create policy "allow_all_entries"   on entries   for all using (true) with check (true);
-create policy "allow_all_customers" on customers for all using (true) with check (true);
-create policy "allow_all_locations" on locations for all using (true) with check (true);
-
--- Realtime aktivieren
-alter publication supabase_realtime add table entries;`;
-  el.style.display = '';
-}
-
 // Restore session from localStorage (no Supabase Auth needed)
 (function restoreSession() {
   const sb = getSupabase();
@@ -3010,11 +2932,9 @@ function updateSyncTab() {
 }
 
 function renderSyncPage() {
-  const setupSupa = document.getElementById('syncSetupSupabase');
   const login = document.getElementById('syncLogin');
   const connected = document.getElementById('syncConnected');
   if (!login) return;
-  if (setupSupa) setupSupa.style.display = 'none'; // immer versteckt
   if (!currentUser) {
     login.style.display = ''; connected.style.display = 'none';
     setSyncStatus('idle', 'Nicht angemeldet');
@@ -3548,6 +3468,7 @@ function onQuickCustomerChange() {
   const sel = document.getElementById('quickCustomerSel');
   const newWrap = document.getElementById('quickNewCustWrap');
   const locWrap = document.getElementById('quickLocWrap');
+  const newLocWrap = document.getElementById('quickNewLocWrap');
   const val = sel.value;
 
   if (val === '__new__') {
@@ -3555,7 +3476,7 @@ function onQuickCustomerChange() {
     _quickCustomerName = '';
     newWrap.style.display = '';
     locWrap.style.display = 'none';
-    document.getElementById('quickLocInput').value = '';
+    newLocWrap.style.display = 'none';
     return;
   }
 
@@ -3565,7 +3486,7 @@ function onQuickCustomerChange() {
     _quickCustomerId = '';
     _quickCustomerName = '';
     locWrap.style.display = 'none';
-    document.getElementById('quickLocInput').value = '';
+    newLocWrap.style.display = 'none';
     return;
   }
 
@@ -3573,12 +3494,20 @@ function onQuickCustomerChange() {
   _quickCustomerId = val;
   _quickCustomerName = cust ? cust.name : '';
 
-  // Populate location datalist with this customer's known locations
+  // Populate location select with this customer's known locations
   const locs = data.locations.filter(l => String(l.customerId) === String(val));
-  document.getElementById('quickLocList').innerHTML =
-    locs.map(l => `<option value="${l.name}">`).join('');
+  const locSel = document.getElementById('quickLocSel');
+  locSel.innerHTML = '<option value="">– Standort wählen –</option>' +
+    locs.map(l => `<option value="${l.id}">${l.name}</option>`).join('') +
+    '<option value="__new__">+ Neuer Standort…</option>';
   locWrap.style.display = '';
-  document.getElementById('quickLocInput').value = '';
+  newLocWrap.style.display = 'none';
+}
+
+function onQuickLocChange() {
+  const locSel = document.getElementById('quickLocSel');
+  const newLocWrap = document.getElementById('quickNewLocWrap');
+  newLocWrap.style.display = locSel.value === '__new__' ? '' : 'none';
 }
 
 function saveQuickEntry() {
@@ -3600,22 +3529,23 @@ function saveQuickEntry() {
     populateAllSelects();
   }
 
-  // Location: match existing or create new
-  const locText = document.getElementById('quickLocInput').value.trim();
+  // Location: from select or new input
+  const locSel = document.getElementById('quickLocSel');
   let locationId = '', locationName = '';
-  if (locText && _quickCustomerId) {
-    const existing = data.locations.find(l =>
-      String(l.customerId) === String(_quickCustomerId) &&
-      l.name.toLowerCase() === locText.toLowerCase()
-    );
-    if (existing) {
-      locationId = String(existing.id);
-      locationName = existing.name;
-    } else {
-      const newLoc = { id: Date.now() + 1, name: locText, customerId: _quickCustomerId };
-      data.locations.push(newLoc);
-      locationId = String(newLoc.id);
-      locationName = newLoc.name;
+  if (locSel && _quickCustomerId) {
+    if (locSel.value === '__new__') {
+      const newLocName = document.getElementById('quickNewLocInput').value.trim();
+      if (newLocName) {
+        const newLoc = { id: String(Date.now() + 1), name: newLocName, customerId: _quickCustomerId };
+        data.locations.push(newLoc);
+        locationId = newLoc.id;
+        locationName = newLoc.name;
+        save();
+        populateAllSelects();
+      }
+    } else if (locSel.value) {
+      const existing = data.locations.find(l => String(l.id) === String(locSel.value));
+      if (existing) { locationId = String(existing.id); locationName = existing.name; }
     }
   }
 
@@ -3637,7 +3567,9 @@ function saveQuickEntry() {
   document.getElementById('quickDuration').innerHTML = '&nbsp;';
   document.getElementById('quickTitle').value = '';
   document.getElementById('quickNote').value  = '';
-  document.getElementById('quickLocInput').value = '';
+  const quickLocSel = document.getElementById('quickLocSel');
+  if (quickLocSel) quickLocSel.value = '';
+  document.getElementById('quickNewLocWrap').style.display = 'none';
 
   // Erfolgs-Feedback
   const btn = document.getElementById('btnSaveQuick');
