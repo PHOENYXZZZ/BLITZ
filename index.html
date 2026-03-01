@@ -2962,6 +2962,7 @@ async function syncPull() {
       save();
       renderEntries();
       renderSaldo();
+      populateAllSelects();
       renderSyncPage();
     }
     const ts = new Date().toLocaleTimeString('de-AT');
