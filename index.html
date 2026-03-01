@@ -889,17 +889,6 @@
   }
 
   .quick-section { margin-bottom: 1.25rem; }
-  .quick-section-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.5rem; }
-  .quick-customer-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .qcb {
-    padding: 0.5rem 1rem; border-radius: 20px;
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.78rem;
-    cursor: pointer; transition: all 0.15s; min-height: unset;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .qcb.selected { background: var(--accent); color: #0f0e0b; border-color: var(--accent); font-weight: 500; }
-  .qcb:active { transform: scale(0.95); }
 
   .quick-details {
     background: var(--surface); border: 1px solid var(--border);
@@ -1175,9 +1164,21 @@
     <div class="quick-duration" id="quickDuration">&nbsp;</div>
 
     <div class="quick-section">
-      <div class="quick-section-label">Kunde</div>
-      <div class="quick-customer-buttons" id="quickCustomerButtons">
-        <span style="color:var(--muted);font-size:0.75rem">Noch keine Kunden — unter Mehr → Stammdaten anlegen</span>
+      <div class="field">
+        <label>Kunde</label>
+        <select id="quickCustomerSel" onchange="onQuickCustomerChange()">
+          <option value="">– Kunde wählen –</option>
+          <option value="__new__">+ Neuer Kunde…</option>
+        </select>
+      </div>
+      <div class="field" id="quickNewCustWrap" style="display:none">
+        <label>Neuer Kundenname</label>
+        <input type="text" id="quickNewCustInput" placeholder="z.B. Muster GmbH">
+      </div>
+      <div class="field" id="quickLocWrap" style="display:none">
+        <label>Standort</label>
+        <input type="text" id="quickLocInput" list="quickLocList" placeholder="Standort wählen oder neu eingeben">
+        <datalist id="quickLocList"></datalist>
       </div>
     </div>
 
@@ -1185,10 +1186,6 @@
       <summary>Weitere Details</summary>
       <div class="quick-details-content">
         <div class="quick-details-grid">
-          <div class="field">
-            <label>Standort</label>
-            <select id="quickLocation"><option value="">– Standort –</option></select>
-          </div>
           <div class="field">
             <label>Pause (min)</label>
             <input type="number" id="quickBreak" value="0" min="0" oninput="updateQuickDuration()">
@@ -1764,7 +1761,7 @@ function showPage(id) {
   const bnav = document.getElementById('bnav-' + navId);
   if (bnav) bnav.classList.add('active');
   window.scrollTo(0, 0);
-  if (id === 'neu')        { renderQuickCustomerButtons(); renderQuickSaldo(); }
+  if (id === 'neu')        { renderQuickSaldo(); }
   if (id === 'mehr')       { renderMehrSaldo(); }
   if (id === 'eintraege')  { populateFilterSelects(); renderEntries(); }
   if (id === 'sync')       { renderSyncPage(); }
@@ -2522,15 +2519,22 @@ function renderLocationList() {
 }
 
 function populateAllSelects() {
-  const customerOptions = '<option value="">– Kunde wählen –</option>' +
-    data.customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const custOpts = '<option value="">– Kunde wählen –</option>' +
+    data.customers.slice().sort((a,b) => a.name.localeCompare(b.name))
+      .map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   ['timerCustomer', 'manCustomer'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { const cur = el.value; el.innerHTML = customerOptions; el.value = cur; }
+    if (el) { const cur = el.value; el.innerHTML = custOpts; el.value = cur; }
   });
+  // Quick entry: customers alphabetically + "new customer" option at end
+  const quickSel = document.getElementById('quickCustomerSel');
+  if (quickSel) {
+    const cur = quickSel.value;
+    quickSel.innerHTML = custOpts + '<option value="__new__">+ Neuer Kunde…</option>';
+    if (cur) quickSel.value = cur;
+  }
   onTimerCustomerChange();
   onManCustomerChange();
-  renderQuickCustomerButtons();
 }
 
 function locationOptionsFor(customerId) {
@@ -3225,7 +3229,6 @@ let _quickCustomerId = '', _quickCustomerName = '';
 function initQuickEntry() {
   document.getElementById('quickDate').value = isoDate(new Date());
   updateQuickDate();
-  renderQuickCustomerButtons();
   renderQuickSaldo();
 }
 
@@ -3270,27 +3273,41 @@ function updateQuickDuration() {
   }
 }
 
-function renderQuickCustomerButtons() {
-  const container = document.getElementById('quickCustomerButtons');
-  if (!container) return;
-  if (data.customers.length === 0) {
-    container.innerHTML = '<span style="color:var(--muted);font-size:0.75rem">Noch keine Kunden — unter Mehr → Stammdaten anlegen</span>';
+function onQuickCustomerChange() {
+  const sel = document.getElementById('quickCustomerSel');
+  const newWrap = document.getElementById('quickNewCustWrap');
+  const locWrap = document.getElementById('quickLocWrap');
+  const val = sel.value;
+
+  if (val === '__new__') {
+    _quickCustomerId = '';
+    _quickCustomerName = '';
+    newWrap.style.display = '';
+    locWrap.style.display = 'none';
+    document.getElementById('quickLocInput').value = '';
     return;
   }
-  container.innerHTML = data.customers.map(c => `
-    <button class="qcb ${c.id === _quickCustomerId ? 'selected' : ''}"
-      onclick="selectQuickCustomer('${c.id}', ${JSON.stringify(c.name)})">${c.name}</button>
-  `).join('');
-}
 
-function selectQuickCustomer(id, name) {
-  _quickCustomerId = id;
-  _quickCustomerName = name;
-  renderQuickCustomerButtons();
-  const locs = data.locations.filter(l => l.customerId === id);
-  const sel = document.getElementById('quickLocation');
-  sel.innerHTML = '<option value="">– Standort –</option>' +
-    locs.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  newWrap.style.display = 'none';
+
+  if (!val) {
+    _quickCustomerId = '';
+    _quickCustomerName = '';
+    locWrap.style.display = 'none';
+    document.getElementById('quickLocInput').value = '';
+    return;
+  }
+
+  const cust = data.customers.find(c => String(c.id) === String(val));
+  _quickCustomerId = val;
+  _quickCustomerName = cust ? cust.name : '';
+
+  // Populate location datalist with this customer's known locations
+  const locs = data.locations.filter(l => String(l.customerId) === String(val));
+  document.getElementById('quickLocList').innerHTML =
+    locs.map(l => `<option value="${l.name}">`).join('');
+  locWrap.style.display = '';
+  document.getElementById('quickLocInput').value = '';
 }
 
 function saveQuickEntry() {
@@ -3299,14 +3316,45 @@ function saveQuickEntry() {
   const to   = document.getElementById('quickTo').value;
   if (!date || !from || !to) { alert('Bitte Datum, Von und Bis ausfüllen.'); return; }
 
-  const locSel = document.getElementById('quickLocation');
+  // New customer: create record on the fly
+  const custSel = document.getElementById('quickCustomerSel');
+  if (custSel.value === '__new__') {
+    const newName = document.getElementById('quickNewCustInput').value.trim();
+    if (!newName) { alert('Bitte Kundenname eingeben.'); return; }
+    const newCust = { id: String(Date.now()), name: newName };
+    data.customers.push(newCust);
+    _quickCustomerId = newCust.id;
+    _quickCustomerName = newCust.name;
+    save();
+    populateAllSelects();
+  }
+
+  // Location: match existing or create new
+  const locText = document.getElementById('quickLocInput').value.trim();
+  let locationId = '', locationName = '';
+  if (locText && _quickCustomerId) {
+    const existing = data.locations.find(l =>
+      String(l.customerId) === String(_quickCustomerId) &&
+      l.name.toLowerCase() === locText.toLowerCase()
+    );
+    if (existing) {
+      locationId = String(existing.id);
+      locationName = existing.name;
+    } else {
+      const newLoc = { id: Date.now() + 1, name: locText, customerId: _quickCustomerId };
+      data.locations.push(newLoc);
+      locationId = String(newLoc.id);
+      locationName = newLoc.name;
+    }
+  }
+
   addEntry({
     date, from, to,
     breakMin:     parseInt(document.getElementById('quickBreak').value) || 0,
     customerId:   _quickCustomerId,
     customerName: _quickCustomerName,
-    locationId:   locSel.value,
-    locationName: locSel.options[locSel.selectedIndex]?.text || '',
+    locationId,
+    locationName,
     task:         document.getElementById('quickTask').value,
     title:        document.getElementById('quickTitle').value,
     note:         document.getElementById('quickNote').value,
@@ -3318,6 +3366,7 @@ function saveQuickEntry() {
   document.getElementById('quickDuration').innerHTML = '&nbsp;';
   document.getElementById('quickTitle').value = '';
   document.getElementById('quickNote').value  = '';
+  document.getElementById('quickLocInput').value = '';
 
   // Erfolgs-Feedback
   const btn = document.getElementById('btnSaveQuick');
