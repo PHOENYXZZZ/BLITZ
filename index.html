@@ -1169,7 +1169,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v34</div>
+<div class="version-badge">v35</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -3071,7 +3071,13 @@ async function loginWithCode() {
   }
 }
 
-function logout() {
+async function logout() {
+  // Erst ausstehende Änderungen hochladen, bevor der Cache geleert wird
+  if (syncPushTimer) {
+    clearTimeout(syncPushTimer);
+    syncPushTimer = null;
+    await syncPush();
+  }
   if (!confirm('Abmelden?')) return;
   const sb = getSupabase();
   if (sb && _realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
@@ -3114,14 +3120,18 @@ async function syncPush() {
       })));
       if (error) throw error;
     }
+    // Kunden: erst alle löschen, dann aktuellen Stand einfügen (verhindert Geister-Einträge)
+    await sb.from('customers').delete().eq('user_id', uid);
     if (data.customers.length > 0) {
-      const { error } = await sb.from('customers').upsert(data.customers.map(c => ({
+      const { error } = await sb.from('customers').insert(data.customers.map(c => ({
         id: String(c.id), user_id: uid, name: c.name
       })));
       if (error) throw error;
     }
+    // Standorte: gleiche Logik
+    await sb.from('locations').delete().eq('user_id', uid);
     if (data.locations.length > 0) {
-      const { error } = await sb.from('locations').upsert(data.locations.map(l => ({
+      const { error } = await sb.from('locations').insert(data.locations.map(l => ({
         id: String(l.id), user_id: uid, customer_id: l.customerId || null, name: l.name
       })));
       if (error) throw error;
