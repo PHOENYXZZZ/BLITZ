@@ -834,16 +834,30 @@
     #wochensollInput { width: 50px !important; font-size: 1.2rem !important; }
   }
 
-  /* TIMER BANNER */
+  /* TIMER BANNER – erscheint unten, über der Nav-Bar */
   .timer-banner {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 9997;
-    background: var(--surface); border-bottom: 2px solid var(--accent);
+    position: fixed;
+    bottom: 1.5rem; left: 0.75rem; right: 0.75rem;
+    z-index: 9997;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0.6rem 1rem; gap: 0.75rem;
+    padding: 0.75rem 1rem; gap: 0.75rem;
     font-size: 0.75rem; font-family: 'DM Mono', monospace;
-    transform: translateY(-100%); transition: transform 0.3s ease;
+    transform: translateY(120px); opacity: 0;
+    transition: transform 0.35s ease, opacity 0.35s ease;
+    pointer-events: none;
   }
-  .timer-banner.visible { transform: translateY(0); }
+  .timer-banner.visible {
+    transform: translateY(0); opacity: 1; pointer-events: auto;
+  }
+  @media (max-width: 640px) {
+    .timer-banner {
+      bottom: calc(64px + env(safe-area-inset-bottom) + 0.75rem);
+    }
+  }
   .timer-banner-time { color: var(--accent); font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 300; }
   .timer-banner-actions { display: flex; gap: 0.5rem; }
   .timer-banner-actions button {
@@ -1459,6 +1473,24 @@ function save() { localStorage.setItem('zeitwerk_v2', JSON.stringify(data)); }
 
 load();
 
+// Timer-Wiederherstellung nach App-Neustart
+(function restoreTimer() {
+  const saved = localStorage.getItem('zt_start');
+  if (!saved) return;
+  timerStart = parseInt(saved);
+  totalBreakMs = parseInt(localStorage.getItem('zt_break') || '0');
+  const savedBreakStart = localStorage.getItem('zt_breakstart');
+  if (savedBreakStart) { onBreak = true; breakStart = parseInt(savedBreakStart); }
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnBreak').style.display = '';
+  document.getElementById('btnStop').style.display = '';
+  if (onBreak) document.getElementById('btnBreak').textContent = '▶ Weiter';
+  updateTimerDisplay();
+  // Banner sofort anzeigen wenn App nach Schließen wieder geöffnet wird
+  setTimeout(showTimerBanner, 500);
+})();
+
 // ============================================================
 //  NAVIGATION
 // ============================================================
@@ -1515,6 +1547,8 @@ function updateTimerDisplay() {
 function startTimer() {
   timerStart = Date.now();
   totalBreakMs = 0; onBreak = false;
+  localStorage.setItem('zt_start', timerStart);
+  localStorage.setItem('zt_break', '0');
   timerInterval = setInterval(updateTimerDisplay, 1000);
   document.getElementById('btnStart').style.display = 'none';
   document.getElementById('btnBreak').style.display = '';
@@ -1525,10 +1559,13 @@ function startTimer() {
 function toggleBreak() {
   if (!onBreak) {
     onBreak = true; breakStart = Date.now();
+    localStorage.setItem('zt_breakstart', breakStart);
     document.getElementById('btnBreak').textContent = '▶ Weiter';
   } else {
     totalBreakMs += Date.now() - breakStart;
     onBreak = false; breakStart = null;
+    localStorage.setItem('zt_break', totalBreakMs);
+    localStorage.removeItem('zt_breakstart');
     document.getElementById('btnBreak').textContent = '⏸ Pause';
   }
 }
@@ -1562,6 +1599,9 @@ function stopTimer() {
   });
 
   timerStart = null;
+  localStorage.removeItem('zt_start');
+  localStorage.removeItem('zt_break');
+  localStorage.removeItem('zt_breakstart');
   document.title = 'Zeitwerk – Elektriker';
   document.getElementById('timerDisplay').textContent = '';
   document.getElementById('btnStart').style.display = '';
@@ -1743,7 +1783,9 @@ function populateFilterSelects() {
 // ============================================================
 let WOCHENSOLL_MIN = (parseFloat(localStorage.getItem('zeitwerk_wochensoll')) || 39) * 60;
 
-function isoDate(d) { return d.toISOString().slice(0,10); }
+function isoDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function getWeekSollMins(mondayDate) {
   // Determine how many worked weekdays in the week (up to today)
