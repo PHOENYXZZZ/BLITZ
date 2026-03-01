@@ -834,6 +834,134 @@
     #wochensollInput { width: 50px !important; font-size: 1.2rem !important; }
   }
 
+  /* ============================================================
+     QUICK ENTRY – Neu-Seite
+  ============================================================ */
+  .quick-saldo-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.65rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    font-size: 0.75rem; color: var(--muted); margin-bottom: 1.5rem;
+  }
+  .quick-saldo-bar strong { color: var(--accent); font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 300; }
+
+  .quick-date-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1rem; margin-bottom: 1.25rem;
+  }
+  .date-nav-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); font-size: 1.4rem; border-radius: 50%;
+    width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0; min-height: unset;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .date-nav-btn:hover, .date-nav-btn:active { color: var(--accent); border-color: var(--accent); background: var(--surface2); }
+
+  .quick-date-display {
+    text-align: center; cursor: pointer; position: relative;
+    padding: 0.6rem 1.5rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    min-width: 150px; transition: border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .quick-date-display:hover { border-color: var(--muted); }
+  .quick-date-display.qd-today { border-color: var(--accent); }
+  .qd-weekday { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+  .quick-date-display.qd-today .qd-weekday { color: var(--accent); }
+  .qd-date-val { font-family: 'Fraunces', serif; font-size: 1.9rem; font-weight: 300; color: var(--text); line-height: 1.1; }
+  .qd-hidden-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+  .quick-time-row {
+    display: flex; align-items: flex-end; gap: 0.75rem; margin-bottom: 0.4rem;
+  }
+  .quick-time-field { flex: 1; }
+  .qtf-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.3rem; text-align: center; }
+  .qtf-input {
+    width: 100%; text-align: center;
+    font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 300;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--accent); padding: 0.75rem 0.25rem;
+  }
+  .qtf-input:focus { border-color: var(--accent); outline: none; }
+  .quick-time-sep { color: var(--muted); font-size: 1.2rem; padding-bottom: 0.9rem; flex-shrink: 0; }
+
+  .quick-duration {
+    text-align: center; font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 300;
+    color: var(--green); min-height: 1.5rem; margin-bottom: 1.25rem;
+  }
+
+  .quick-section { margin-bottom: 1.25rem; }
+  .quick-section-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.5rem; }
+  .quick-customer-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .qcb {
+    padding: 0.5rem 1rem; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.78rem;
+    cursor: pointer; transition: all 0.15s; min-height: unset;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .qcb.selected { background: var(--accent); color: #0f0e0b; border-color: var(--accent); font-weight: 500; }
+  .qcb:active { transform: scale(0.95); }
+
+  .quick-details {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 1.25rem; overflow: hidden;
+  }
+  .quick-details summary {
+    padding: 0.8rem 1rem; font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--muted); cursor: pointer;
+    list-style: none; display: flex; justify-content: space-between; align-items: center;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .quick-details summary::after { content: '›'; font-size: 1rem; transition: transform 0.2s; }
+  .quick-details[open] summary::after { transform: rotate(90deg); }
+  .quick-details summary::-webkit-details-marker { display: none; }
+  .quick-details-content { padding: 0 1rem 1rem; border-top: 1px solid var(--border); }
+  .quick-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
+
+  .btn-save-quick {
+    width: 100%; padding: 1rem; border: none; border-radius: 10px;
+    background: var(--accent); color: #0f0e0b;
+    font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+    transition: background 0.2s, transform 0.1s; min-height: unset;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-save-quick:active { transform: scale(0.98); }
+  .btn-save-quick.saved { background: var(--green); }
+
+  /* ============================================================
+     MEHR-SEITE
+  ============================================================ */
+  .mehr-saldo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;
+  }
+  .mehr-saldo-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; text-align: center;
+  }
+  .mehr-saldo-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.3rem; }
+  .mehr-saldo-val { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 300; }
+  .mehr-saldo-sub { font-size: 0.6rem; color: var(--muted); margin-top: 0.2rem; }
+
+  .mehr-menu { display: flex; flex-direction: column; gap: 0.4rem; }
+  .mehr-menu-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.5rem; margin-top: 1rem; }
+  .mehr-item {
+    display: flex; align-items: center; gap: 0.9rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.9rem 1rem; cursor: pointer; text-align: left;
+    color: var(--text); transition: all 0.15s; min-height: unset; width: 100%;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'DM Mono', monospace;
+  }
+  .mehr-item:hover, .mehr-item:active { background: var(--surface2); border-color: var(--muted); }
+  .mehr-icon { font-size: 1.2rem; flex-shrink: 0; width: 28px; text-align: center; }
+  .mehr-item-text { flex: 1; }
+  .mehr-title { font-size: 0.82rem; color: var(--text); }
+  .mehr-sub { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
+  .mehr-chevron { color: var(--border); font-size: 1rem; }
+
   /* TIMER BANNER – erscheint unten, über der Nav-Bar */
   .timer-banner {
     position: fixed;
@@ -1018,18 +1146,16 @@
   </header>
 
   <div class="tabs no-print">
-    <button class="tab active" onclick="showPage('zeiterfassung')">⏱ Zeiterfassung</button>
+    <button class="tab active" onclick="showPage('neu')">➕ Neu</button>
     <button class="tab" onclick="showPage('eintraege')">📋 Einträge</button>
     <button class="tab" onclick="showPage('uebersicht')">📅 Übersicht</button>
-    <button class="tab" onclick="showPage('auswertung')">📊 Auswertung</button>
-    <button class="tab" onclick="showPage('stammdaten')">⚙ Stammdaten</button>
-    <button class="tab" onclick="showPage('sync')" id="syncTab">☁ Sync</button>
+    <button class="tab" onclick="showPage('mehr')">··· Mehr</button>
   </div>
 
   <!-- Mobile Bottom Navigation -->
   <nav class="bottom-nav no-print">
-    <button class="bottom-nav-item active" id="bnav-zeiterfassung" onclick="showPage('zeiterfassung')">
-      <span class="nav-icon">⏱</span><span>Erfassen</span>
+    <button class="bottom-nav-item active" id="bnav-neu" onclick="showPage('neu')">
+      <span class="nav-icon">➕</span><span>Neu</span>
     </button>
     <button class="bottom-nav-item" id="bnav-eintraege" onclick="showPage('eintraege')">
       <span class="nav-icon">📋</span><span>Einträge</span>
@@ -1037,19 +1163,168 @@
     <button class="bottom-nav-item" id="bnav-uebersicht" onclick="showPage('uebersicht')">
       <span class="nav-icon">📅</span><span>Übersicht</span>
     </button>
-    <button class="bottom-nav-item" id="bnav-auswertung" onclick="showPage('auswertung')">
-      <span class="nav-icon">📊</span><span>Statistik</span>
-    </button>
-    <button class="bottom-nav-item" id="bnav-stammdaten" onclick="showPage('stammdaten')">
-      <span class="nav-icon">⚙</span><span>Daten</span>
-    </button>
-    <button class="bottom-nav-item" id="bnav-sync" onclick="showPage('sync')">
-      <span class="nav-icon" id="bnavSyncIcon">☁</span><span>Sync</span>
+    <button class="bottom-nav-item" id="bnav-mehr" onclick="showPage('mehr')">
+      <span class="nav-icon">···</span><span>Mehr</span>
     </button>
   </nav>
 
+  <!-- =================== NEU (Quick Entry) =================== -->
+  <div id="page-neu" class="page active">
+    <div class="quick-saldo-bar">
+      <span id="quickSaldoText">Woche: –</span>
+      <span style="font-size:0.65rem;color:var(--muted)" id="quickTodayLabel"></span>
+    </div>
+
+    <div class="quick-date-row">
+      <button class="date-nav-btn" onclick="quickDateShift(-1)">‹</button>
+      <div class="quick-date-display" id="quickDateDisplay">
+        <div class="qd-weekday" id="qd-weekday">Heute</div>
+        <div class="qd-date-val" id="qd-date-val">–</div>
+        <input type="date" id="quickDate" class="qd-hidden-input" oninput="updateQuickDate()">
+      </div>
+      <button class="date-nav-btn" onclick="quickDateShift(1)">›</button>
+    </div>
+
+    <div class="quick-time-row">
+      <div class="quick-time-field">
+        <div class="qtf-label">Von</div>
+        <input type="time" id="quickFrom" class="qtf-input" oninput="updateQuickDuration()">
+      </div>
+      <div class="quick-time-sep">→</div>
+      <div class="quick-time-field">
+        <div class="qtf-label">Bis</div>
+        <input type="time" id="quickTo" class="qtf-input" oninput="updateQuickDuration()">
+      </div>
+    </div>
+    <div class="quick-duration" id="quickDuration">&nbsp;</div>
+
+    <div class="quick-section">
+      <div class="quick-section-label">Kunde</div>
+      <div class="quick-customer-buttons" id="quickCustomerButtons">
+        <span style="color:var(--muted);font-size:0.75rem">Noch keine Kunden — unter Mehr → Stammdaten anlegen</span>
+      </div>
+    </div>
+
+    <details class="quick-details" id="quickDetails">
+      <summary>Weitere Details</summary>
+      <div class="quick-details-content">
+        <div class="quick-details-grid">
+          <div class="field">
+            <label>Standort</label>
+            <select id="quickLocation"><option value="">– Standort –</option></select>
+          </div>
+          <div class="field">
+            <label>Pause (min)</label>
+            <input type="number" id="quickBreak" value="0" min="0" oninput="updateQuickDuration()">
+          </div>
+          <div class="field">
+            <label>Tätigkeit</label>
+            <select id="quickTask">
+              <option value="Installation">Installation</option>
+              <option value="Wartung">Wartung</option>
+              <option value="Störung">Störung</option>
+              <option value="Inbetriebnahme">Inbetriebnahme</option>
+              <option value="Planung">Planung</option>
+              <option value="Sonstiges">Sonstiges</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Titel</label>
+            <input type="text" id="quickTitle" placeholder="z.B. Kabel verlegen...">
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Notiz</label>
+            <textarea id="quickNote" rows="2" placeholder="Beschreibung..."></textarea>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <button class="btn-save-quick" id="btnSaveQuick" onclick="saveQuickEntry()">+ Speichern</button>
+  </div>
+
+  <!-- =================== MEHR =================== -->
+  <div id="page-mehr" class="page">
+    <div class="mehr-saldo">
+      <div class="mehr-saldo-card">
+        <div class="mehr-saldo-label">Diese Woche</div>
+        <div class="mehr-saldo-val" id="mehrWeekVal">–</div>
+        <div class="mehr-saldo-sub" id="mehrWeekSub"></div>
+      </div>
+      <div class="mehr-saldo-card">
+        <div class="mehr-saldo-label">Diesen Monat</div>
+        <div class="mehr-saldo-val" id="mehrMonthVal">–</div>
+        <div class="mehr-saldo-sub" id="mehrMonthSub"></div>
+      </div>
+    </div>
+
+    <div class="mehr-menu-title">Zeiterfassung</div>
+    <div class="mehr-menu">
+      <button class="mehr-item" onclick="showPage('zeiterfassung')">
+        <span class="mehr-icon">⏱</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">Live-Timer</div>
+          <div class="mehr-sub">Stempeluhr für direkte Zeiterfassung</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+      <button class="mehr-item" onclick="showPage('uebersicht')">
+        <span class="mehr-icon">📅</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">Übersicht</div>
+          <div class="mehr-sub">Woche, Monat und Jahresansicht</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+      <button class="mehr-item" onclick="showPage('auswertung')">
+        <span class="mehr-icon">📊</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">Auswertung</div>
+          <div class="mehr-sub">Statistiken und Kundenübersicht</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+    </div>
+
+    <div class="mehr-menu-title">Einstellungen & Export</div>
+    <div class="mehr-menu">
+      <button class="mehr-item" onclick="showPage('stammdaten')">
+        <span class="mehr-icon">⚙</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">Stammdaten</div>
+          <div class="mehr-sub">Kunden, Standorte, PIN-Schutz</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+      <button class="mehr-item" onclick="showPage('sync')">
+        <span class="mehr-icon" id="mehrSyncIcon">☁</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">Sync</div>
+          <div class="mehr-sub">Daten zwischen Geräten synchronisieren</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+      <button class="mehr-item" onclick="exportPDF()">
+        <span class="mehr-icon">📄</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">PDF Stundenzettel</div>
+          <div class="mehr-sub">Druckfertiger Export aller Einträge</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+      <button class="mehr-item" onclick="exportCSV()">
+        <span class="mehr-icon">⬇</span>
+        <div class="mehr-item-text">
+          <div class="mehr-title">CSV exportieren</div>
+          <div class="mehr-sub">Daten für Excel oder Numbers</div>
+        </div>
+        <span class="mehr-chevron">›</span>
+      </button>
+    </div>
+  </div>
+
   <!-- =================== ZEITERFASSUNG =================== -->
-  <div id="page-zeiterfassung" class="page active">
+  <div id="page-zeiterfassung" class="page">
 
     <div class="panel panel-accent">
       <div class="live-time" id="liveClock">00:00:00</div>
@@ -1494,22 +1769,28 @@ load();
 // ============================================================
 //  NAVIGATION
 // ============================================================
+// Seiten die unter "Mehr" fallen → bnav-mehr bleibt aktiv
+const MEHR_PAGES = new Set(['zeiterfassung','auswertung','stammdaten','sync']);
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  // Highlight top tab
+  // Desktop tabs
   [...document.querySelectorAll('.tab')].forEach(t => {
     if (t.getAttribute('onclick')?.includes(`'${id}'`)) t.classList.add('active');
+    if (MEHR_PAGES.has(id) && t.getAttribute('onclick')?.includes("'mehr'")) t.classList.add('active');
   });
-  // Highlight bottom nav item
-  const bnav = document.getElementById('bnav-' + id);
+  // Bottom nav
+  const navId = MEHR_PAGES.has(id) ? 'mehr' : id;
+  const bnav = document.getElementById('bnav-' + navId);
   if (bnav) bnav.classList.add('active');
-  // Scroll to top on mobile
   window.scrollTo(0, 0);
-  if (id === 'eintraege') { populateFilterSelects(); renderEntries(); }
-  if (id === 'sync') { renderSyncPage(); }
+  if (id === 'neu')        { renderQuickCustomerButtons(); renderQuickSaldo(); }
+  if (id === 'mehr')       { renderMehrSaldo(); }
+  if (id === 'eintraege')  { populateFilterSelects(); renderEntries(); }
+  if (id === 'sync')       { renderSyncPage(); }
   if (id === 'uebersicht') { renderUebersicht(); }
   if (id === 'auswertung') { populateStatsMonths(); renderStats(); }
   if (id === 'stammdaten') { renderStammdaten(); updatePinSettingsUI(); }
@@ -2279,6 +2560,7 @@ function populateAllSelects() {
   });
   onTimerCustomerChange();
   onManCustomerChange();
+  renderQuickCustomerButtons();
 }
 
 function locationOptionsFor(customerId) {
@@ -2944,6 +3226,7 @@ renderSaldo();
 updateSyncTab();
 initPinLock();
 initSwipe();
+initQuickEntry();
 
 // Auto-pull on startup if sync configured
 if (syncToken && syncGistId) {
@@ -2959,6 +3242,164 @@ if (syncToken && syncGistId) {
 setInterval(() => {
   if (syncToken && syncGistId && !syncBusy) syncPull();
 }, 2 * 60 * 1000);
+
+// ============================================================
+//  QUICK ENTRY – Neu-Seite
+// ============================================================
+let _quickCustomerId = '', _quickCustomerName = '';
+
+function initQuickEntry() {
+  document.getElementById('quickDate').value = isoDate(new Date());
+  updateQuickDate();
+  renderQuickCustomerButtons();
+  renderQuickSaldo();
+}
+
+function quickDateShift(d) {
+  const el = document.getElementById('quickDate');
+  const cur = new Date(el.value + 'T12:00');
+  cur.setDate(cur.getDate() + d);
+  el.value = isoDate(cur);
+  updateQuickDate();
+}
+
+function updateQuickDate() {
+  const val = document.getElementById('quickDate').value;
+  if (!val) return;
+  const d = new Date(val + 'T12:00');
+  const today = isoDate(new Date());
+  const weekdays = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  document.getElementById('qd-weekday').textContent = val === today ? 'Heute' : weekdays[d.getDay()];
+  document.getElementById('qd-date-val').textContent =
+    d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  document.getElementById('quickDateDisplay').classList.toggle('qd-today', val === today);
+  document.getElementById('quickTodayLabel').textContent =
+    d.toLocaleDateString('de-AT', { weekday: 'long' });
+}
+
+function updateQuickDuration() {
+  const from = document.getElementById('quickFrom').value;
+  const to   = document.getElementById('quickTo').value;
+  const brk  = parseInt(document.getElementById('quickBreak').value) || 0;
+  const el   = document.getElementById('quickDuration');
+  if (from && to) {
+    const dur = calcDuration(from, to, brk);
+    if (dur.total > 0) {
+      el.textContent = `${dur.h}h ${String(dur.m).padStart(2,'0')}m`;
+      el.style.color = 'var(--green)';
+    } else {
+      el.textContent = '(ungültige Zeit)';
+      el.style.color = 'var(--red)';
+    }
+  } else {
+    el.innerHTML = '&nbsp;';
+  }
+}
+
+function renderQuickCustomerButtons() {
+  const container = document.getElementById('quickCustomerButtons');
+  if (!container) return;
+  if (data.customers.length === 0) {
+    container.innerHTML = '<span style="color:var(--muted);font-size:0.75rem">Noch keine Kunden — unter Mehr → Stammdaten anlegen</span>';
+    return;
+  }
+  container.innerHTML = data.customers.map(c => `
+    <button class="qcb ${c.id === _quickCustomerId ? 'selected' : ''}"
+      onclick="selectQuickCustomer('${c.id}', ${JSON.stringify(c.name)})">${c.name}</button>
+  `).join('');
+}
+
+function selectQuickCustomer(id, name) {
+  _quickCustomerId = id;
+  _quickCustomerName = name;
+  renderQuickCustomerButtons();
+  const locs = data.locations.filter(l => l.customerId === id);
+  const sel = document.getElementById('quickLocation');
+  sel.innerHTML = '<option value="">– Standort –</option>' +
+    locs.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+}
+
+function saveQuickEntry() {
+  const date = document.getElementById('quickDate').value;
+  const from = document.getElementById('quickFrom').value;
+  const to   = document.getElementById('quickTo').value;
+  if (!date || !from || !to) { alert('Bitte Datum, Von und Bis ausfüllen.'); return; }
+
+  const locSel = document.getElementById('quickLocation');
+  addEntry({
+    date, from, to,
+    breakMin:     parseInt(document.getElementById('quickBreak').value) || 0,
+    customerId:   _quickCustomerId,
+    customerName: _quickCustomerName,
+    locationId:   locSel.value,
+    locationName: locSel.options[locSel.selectedIndex]?.text || '',
+    task:         document.getElementById('quickTask').value,
+    title:        document.getElementById('quickTitle').value,
+    note:         document.getElementById('quickNote').value,
+  });
+
+  // Reset Zeitfelder, Datum + Kunde bleiben
+  document.getElementById('quickFrom').value = '';
+  document.getElementById('quickTo').value   = '';
+  document.getElementById('quickDuration').innerHTML = '&nbsp;';
+  document.getElementById('quickTitle').value = '';
+  document.getElementById('quickNote').value  = '';
+
+  // Erfolgs-Feedback
+  const btn = document.getElementById('btnSaveQuick');
+  btn.textContent = '✓ Gespeichert';
+  btn.classList.add('saved');
+  setTimeout(() => { btn.textContent = '+ Speichern'; btn.classList.remove('saved'); }, 1800);
+
+  renderQuickSaldo();
+}
+
+function renderQuickSaldo() {
+  const today = new Date();
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const monday = new Date(today); monday.setDate(today.getDate() - dow);
+  const weekMins = data.entries.filter(e => e.date >= isoDate(monday))
+    .reduce((s,e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
+  const diff = weekMins - getWeekSollMins(monday);
+  const h = Math.floor(weekMins/60), m = weekMins%60;
+  const pad = n => String(n).padStart(2,'0');
+  const sign = diff >= 0 ? '+' : '−';
+  const da = Math.abs(diff);
+  const col = diff >= 0 ? 'var(--green)' : 'var(--red)';
+  const el = document.getElementById('quickSaldoText');
+  if (el) el.innerHTML =
+    `Woche: <strong>${h}h ${pad(m)}m</strong> <span style="color:${col}">${sign}${Math.floor(da/60)}h${pad(da%60)}m</span>`;
+}
+
+function renderMehrSaldo() {
+  // Week
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const monday = new Date(today); monday.setDate(today.getDate() - dow);
+  const weekMins = data.entries.filter(e => e.date >= isoDate(monday))
+    .reduce((s,e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
+  const weekDiff = weekMins - getWeekSollMins(monday);
+  // Month
+  const mStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const monthMins = data.entries.filter(e => e.date.startsWith(mStr))
+    .reduce((s,e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
+  let monthSoll = 0;
+  const cur = new Date(today.getFullYear(), today.getMonth(), 1);
+  while (cur <= today) { const d=cur.getDay(); if(d!==0&&d!==6) monthSoll+=WOCHENSOLL_MIN/5; cur.setDate(cur.getDate()+1); }
+  const monthDiff = monthMins - monthSoll;
+
+  function fmtS(m) { const a=Math.abs(m),h=Math.floor(a/60),mi=a%60,s=m>=0?'+':'−'; return `${s}${h}h ${String(mi).padStart(2,'0')}m`; }
+  function sc(m) { return m>0?'saldo-plus':m<0?'saldo-minus':'saldo-neutral'; }
+
+  const wv = document.getElementById('mehrWeekVal');
+  const ws = document.getElementById('mehrWeekSub');
+  const mv = document.getElementById('mehrMonthVal');
+  const ms = document.getElementById('mehrMonthSub');
+  if (wv) { wv.textContent = fmtS(weekDiff); wv.className = `mehr-saldo-val ${sc(weekDiff)}`; }
+  if (ws) ws.textContent = fmtDur(weekMins);
+  if (mv) { mv.textContent = fmtS(monthDiff); mv.className = `mehr-saldo-val ${sc(monthDiff)}`; }
+  if (ms) ms.textContent = fmtDur(monthMins);
+}
 
 // ============================================================
 //  EINTRAG DUPLIZIEREN
