@@ -686,10 +686,82 @@
 
   /* Desktop: bottom nav hidden */
   .bottom-nav { display: none; }
+
+  /* PIN LOCK SCREEN */
+  .pin-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2rem; padding: 2rem;
+  }
+  .pin-overlay.hidden { display: none; }
+  .pin-logo { font-family: 'Fraunces', serif; font-size: 3rem; font-weight: 700; color: var(--accent); letter-spacing: -2px; }
+  .pin-subtitle { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-top: -1.5rem; }
+  .pin-dots { display: flex; gap: 1rem; margin: 0.5rem 0; }
+  .pin-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border); background: transparent;
+    transition: all 0.15s;
+  }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)}
+  }
+  .pin-error { color: var(--red); font-size: 0.72rem; min-height: 1rem; }
+  .pin-pad {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem; width: 100%; max-width: 280px;
+  }
+  .pin-key {
+    aspect-ratio: 1; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 300;
+    color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.1s; -webkit-tap-highlight-color: transparent;
+    min-height: 72px; min-width: 72px;
+  }
+  .pin-key:active, .pin-key:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); transform: scale(0.94); }
+  .pin-key.del { font-size: 1.1rem; }
+  .pin-key.empty { background: transparent; border-color: transparent; pointer-events: none; }
+  .pin-setup-hint { font-size: 0.68rem; color: var(--muted); text-align: center; max-width: 260px; line-height: 1.6; }
+  .pin-mode-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
 </style>
 </head>
 <body>
-<div class="container">
+
+<!-- PIN LOCK OVERLAY -->
+<div class="pin-overlay hidden" id="pinOverlay">
+  <div class="pin-logo">Zeitwerk</div>
+  <div class="pin-subtitle">Elektro · Energie & Gebäudetechnik</div>
+  <div class="pin-mode-label" id="pinModeLabel">PIN eingeben</div>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-error" id="pinError"></div>
+  <div class="pin-pad">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key empty"></button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-setup-hint" id="pinSetupHint"></div>
+</div>
+
+<div class="container" id="appContainer">
 
   <header>
     <h1>Zeitwerk</h1>
@@ -991,9 +1063,17 @@
 
       </div>
     </div>
-  </div>
 
-  <!-- =================== SYNC =================== -->
+    <!-- PIN Schutz -->
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-title">PIN-Schutz</div>
+      <div id="pinStatusInfo" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem"></div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        <button class="btn-ghost" onclick="startPinSetup()" id="btnSetPin">PIN festlegen</button>
+        <button class="btn-danger" onclick="removePin()" id="btnRemovePin" style="display:none">PIN entfernen</button>
+      </div>
+    </div>
+  </div>
   <div id="page-sync" class="page">
 
     <!-- Status Bar -->
@@ -1123,7 +1203,7 @@
 
   </div>
 
-</div><!-- /container -->
+</div><!-- /appContainer -->
 
 <script>
 // ============================================================
@@ -1166,7 +1246,7 @@ function showPage(id) {
   if (id === 'sync') { renderSyncPage(); }
   if (id === 'uebersicht') { renderUebersicht(); }
   if (id === 'auswertung') { populateStatsMonths(); renderStats(); }
-  if (id === 'stammdaten') { renderStammdaten(); }
+  if (id === 'stammdaten') { renderStammdaten(); updatePinSettingsUI(); }
 }
 
 // ============================================================
@@ -2301,6 +2381,147 @@ function save() {
 }
 
 // ============================================================
+//  PIN LOCK
+// ============================================================
+let pinBuffer = '';
+let pinMode = 'unlock'; // 'unlock' | 'setup1' | 'setup2'
+let pinSetupFirst = '';
+
+function pinHash(pin) {
+  // Simple hash — not crypto-grade but good enough for local PIN
+  let h = 0;
+  for (let i = 0; i < pin.length; i++) h = (Math.imul(31, h) + pin.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+function initPinLock() {
+  const stored = localStorage.getItem('zeitwerk_pin');
+  if (stored) {
+    // Show lock screen
+    document.getElementById('pinOverlay').classList.remove('hidden');
+    document.getElementById('appContainer').style.display = 'none';
+    pinMode = 'unlock';
+    document.getElementById('pinModeLabel').textContent = 'PIN eingeben';
+    document.getElementById('pinSetupHint').textContent = '';
+  }
+  updatePinSettingsUI();
+}
+
+function updatePinSettingsUI() {
+  const stored = localStorage.getItem('zeitwerk_pin');
+  const info = document.getElementById('pinStatusInfo');
+  const btnSet = document.getElementById('btnSetPin');
+  const btnRemove = document.getElementById('btnRemovePin');
+  if (!info) return;
+  if (stored) {
+    info.innerHTML = '<span style="color:var(--green)">✓ PIN-Schutz aktiv</span> — die App ist beim Öffnen gesperrt.';
+    btnSet.textContent = 'PIN ändern';
+    btnRemove.style.display = '';
+  } else {
+    info.textContent = 'Kein PIN gesetzt — die App öffnet ohne Sperre.';
+    btnSet.textContent = 'PIN festlegen';
+    btnRemove.style.display = 'none';
+  }
+}
+
+function startPinSetup() {
+  pinBuffer = '';
+  pinMode = 'setup1';
+  pinSetupFirst = '';
+  document.getElementById('pinOverlay').classList.remove('hidden');
+  document.getElementById('appContainer').style.display = 'none';
+  document.getElementById('pinModeLabel').textContent = 'Neuen PIN eingeben';
+  document.getElementById('pinSetupHint').textContent = '4-stellige Zahl wählen — du brauchst sie beim nächsten Öffnen.';
+  document.getElementById('pinError').textContent = '';
+  updatePinDots();
+}
+
+function pinKey(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(() => handlePinComplete(), 120);
+  }
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+  document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    dot.classList.toggle('filled', i < pinBuffer.length);
+    dot.classList.remove('error');
+  }
+}
+
+function handlePinComplete() {
+  if (pinMode === 'unlock') {
+    const stored = localStorage.getItem('zeitwerk_pin');
+    if (pinHash(pinBuffer) === stored) {
+      // Correct!
+      document.getElementById('pinOverlay').classList.add('hidden');
+      document.getElementById('appContainer').style.display = '';
+    } else {
+      // Wrong
+      document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+      document.getElementById('pinError').textContent = 'Falscher PIN. Bitte nochmal.';
+      setTimeout(() => {
+        pinBuffer = '';
+        updatePinDots();
+      }, 700);
+    }
+  } else if (pinMode === 'setup1') {
+    pinSetupFirst = pinBuffer;
+    pinBuffer = '';
+    pinMode = 'setup2';
+    document.getElementById('pinModeLabel').textContent = 'PIN bestätigen';
+    document.getElementById('pinSetupHint').textContent = 'Bitte denselben PIN nochmal eingeben.';
+    document.getElementById('pinError').textContent = '';
+    updatePinDots();
+  } else if (pinMode === 'setup2') {
+    if (pinBuffer === pinSetupFirst) {
+      localStorage.setItem('zeitwerk_pin', pinHash(pinBuffer));
+      document.getElementById('pinOverlay').classList.add('hidden');
+      document.getElementById('appContainer').style.display = '';
+      updatePinSettingsUI();
+      alert('✓ PIN gespeichert! Ab jetzt ist die App beim Öffnen geschützt.');
+    } else {
+      document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+      document.getElementById('pinError').textContent = 'PINs stimmen nicht überein.';
+      setTimeout(() => {
+        pinBuffer = '';
+        pinMode = 'setup1';
+        pinSetupFirst = '';
+        document.getElementById('pinModeLabel').textContent = 'Neuen PIN eingeben';
+        document.getElementById('pinSetupHint').textContent = '4-stellige Zahl wählen.';
+        document.getElementById('pinError').textContent = '';
+        updatePinDots();
+      }, 800);
+    }
+  }
+}
+
+function removePin() {
+  if (!confirm('PIN-Schutz wirklich entfernen?')) return;
+  localStorage.removeItem('zeitwerk_pin');
+  updatePinSettingsUI();
+}
+
+// Keyboard support for PIN
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('pinOverlay').classList.contains('hidden')) {
+    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+    if (e.key === 'Backspace') pinDel();
+  }
+});
+
+// ============================================================
 //  INIT
 // ============================================================
 document.getElementById('manDate').value = new Date().toISOString().slice(0, 10);
@@ -2309,6 +2530,7 @@ populateAllSelects();
 renderEntries();
 renderSaldo();
 updateSyncTab();
+initPinLock();
 
 // Auto-pull on startup if sync configured
 if (syncToken && syncGistId) {
