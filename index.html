@@ -1161,7 +1161,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v26</div>
+<div class="version-badge">v27</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -2131,8 +2131,7 @@ function toggleTransferred(id) {
   const e = data.entries.find(x => x.id === id);
   if (!e) return;
   e.transferred = !e.transferred;
-  save();
-  syncPush();
+  save(); // debounced push via save()
   // Update in-place — no full re-render needed
   const btn = document.querySelector(`[data-transfer-id="${id}"]`);
   if (btn) {
@@ -3753,7 +3752,8 @@ function deleteEntry(id) {
     save();
     renderEntries();
     renderSaldo();
-    syncPush(); // push deletion to Gist immediately
+    clearTimeout(syncPushTimer); // cancel debounce, push tombstone immediately
+    syncPush();
   } else {
     // Erster Klick → Bestätigung anzeigen
     btn.classList.add('confirm');
