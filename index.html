@@ -289,9 +289,53 @@
     cursor: pointer;
     font-size: 1.1rem;
     padding: 0.2rem 0.3rem;
-    transition: color 0.15s;
+    transition: all 0.15s;
   }
   .entry-delete:hover { color: var(--red); border: none; }
+  .entry-delete.confirm {
+    color: var(--red);
+    border: 1px solid var(--red) !important;
+    border-radius: 2px;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    letter-spacing: 0.5px;
+    background: rgba(235,87,87,0.1);
+  }
+
+  .entry-edit {
+    background: none;
+    border: none;
+    color: var(--border);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.2rem 0.3rem;
+    transition: color 0.15s;
+  }
+  .entry-edit:hover { color: var(--accent); border: none; }
+
+  .edit-modal-overlay {
+    position: fixed; inset: 0; z-index: 5000;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .edit-modal-overlay.hidden { display: none; }
+  .edit-modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: 4px;
+    padding: 1.5rem;
+    width: 100%; max-width: 480px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .edit-modal-title {
+    font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--muted); margin-bottom: 1.2rem;
+  }
+  .edit-modal-actions {
+    display: flex; gap: 0.75rem; margin-top: 1.2rem; justify-content: flex-end; flex-wrap: wrap;
+  }
 
   .empty-state {
     text-align: center;
@@ -1372,12 +1416,7 @@ function addEntry(e) {
   renderSaldo();
 }
 
-function deleteEntry(id) {
-  data.entries = data.entries.filter(e => e.id !== id);
-  save();
-  renderEntries();
-  renderSaldo();
-}
+// deleteEntry is defined below (requires double-tap confirmation)
 
 // ============================================================
 //  DURATION HELPER
@@ -1474,7 +1513,10 @@ function renderEntries() {
           <div class="entry-duration">${dur.h}h ${String(dur.m).padStart(2,'0')}m</div>
           ${breakInfo}
         </div>
-        <button class="entry-delete" onclick="deleteEntry(${e.id})" title="Löschen">×</button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.25rem">
+          <button class="entry-edit" onclick="editEntry(${e.id})" title="Bearbeiten">✎</button>
+          <button class="entry-delete" data-delete-id="${e.id}" onclick="deleteEntry(${e.id})" title="Löschen">×</button>
+        </div>
       </div>`;
   }).join('');
 }
@@ -2546,6 +2588,163 @@ if (syncToken && syncGistId) {
 setInterval(() => {
   if (syncToken && syncGistId && !syncBusy) syncPull();
 }, 2 * 60 * 1000);
+
+// ============================================================
+//  EDIT ENTRY MODAL
+// ============================================================
+let _editId = null;
+let _deleteTimers = {};
+
+function editEntry(id) {
+  const e = data.entries.find(x => x.id === id);
+  if (!e) return;
+  _editId = id;
+
+  document.getElementById('editDate').value = e.date || '';
+  document.getElementById('editFrom').value = e.from || '';
+  document.getElementById('editTo').value = e.to || '';
+  document.getElementById('editBreak').value = e.breakMin || 0;
+  document.getElementById('editTitle').value = e.title || '';
+  document.getElementById('editNote').value = e.note || '';
+
+  // Populate customer select
+  const cSel = document.getElementById('editCustomer');
+  cSel.innerHTML = '<option value="">– Kunde –</option>' +
+    data.customers.map(c => `<option value="${c.id}" ${c.id === e.customerId ? 'selected' : ''}>${c.name}</option>`).join('');
+
+  // Populate location select based on customer
+  populateEditLocations(e.customerId, e.locationId);
+
+  // Task
+  document.getElementById('editTask').value = e.task || '';
+
+  document.getElementById('editModalOverlay').classList.remove('hidden');
+}
+
+function populateEditLocations(customerId, selectedId) {
+  const lSel = document.getElementById('editLocation');
+  const locs = customerId ? data.locations.filter(l => l.customerId === customerId) : data.locations;
+  lSel.innerHTML = '<option value="">– Standort –</option>' +
+    locs.map(l => `<option value="${l.id}" ${l.id === selectedId ? 'selected' : ''}>${l.name}</option>`).join('');
+}
+
+function closeEditModal() {
+  document.getElementById('editModalOverlay').classList.add('hidden');
+  _editId = null;
+}
+
+function saveEditEntry() {
+  if (_editId === null) return;
+  const e = data.entries.find(x => x.id === _editId);
+  if (!e) return;
+
+  const from = document.getElementById('editFrom').value;
+  const to = document.getElementById('editTo').value;
+  const date = document.getElementById('editDate').value;
+  if (!date || !from || !to) { alert('Bitte Datum, Von und Bis ausfüllen.'); return; }
+
+  e.date = date;
+  e.from = from;
+  e.to = to;
+  e.breakMin = parseInt(document.getElementById('editBreak').value) || 0;
+  e.title = document.getElementById('editTitle').value;
+  e.note = document.getElementById('editNote').value;
+  e.task = document.getElementById('editTask').value;
+
+  const cSel = document.getElementById('editCustomer');
+  e.customerId = cSel.value;
+  e.customerName = cSel.options[cSel.selectedIndex]?.text || '';
+
+  const lSel = document.getElementById('editLocation');
+  e.locationId = lSel.value;
+  e.locationName = lSel.options[lSel.selectedIndex]?.text || '';
+
+  save();
+  renderEntries();
+  renderSaldo();
+  closeEditModal();
+}
+
+function deleteEntry(id) {
+  const btn = document.querySelector(`button[data-delete-id="${id}"]`);
+  if (!btn) return;
+
+  if (_deleteTimers[id]) {
+    // Zweiter Klick → wirklich löschen
+    clearTimeout(_deleteTimers[id]);
+    delete _deleteTimers[id];
+    data.entries = data.entries.filter(e => e.id !== id);
+    save();
+    renderEntries();
+    renderSaldo();
+  } else {
+    // Erster Klick → Bestätigung anzeigen
+    btn.classList.add('confirm');
+    btn.textContent = 'Sicher?';
+    _deleteTimers[id] = setTimeout(() => {
+      delete _deleteTimers[id];
+      // Eintrag noch vorhanden? Button zurücksetzen
+      const b = document.querySelector(`button[data-delete-id="${id}"]`);
+      if (b) { b.classList.remove('confirm'); b.textContent = '×'; }
+    }, 2500);
+  }
+}
 </script>
+
+<!-- EDIT MODAL -->
+<div class="edit-modal-overlay hidden" id="editModalOverlay" onclick="if(event.target===this)closeEditModal()">
+  <div class="edit-modal-box">
+    <div class="edit-modal-title">Eintrag bearbeiten</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Datum</label>
+        <input type="date" id="editDate">
+      </div>
+      <div class="field">
+        <label>Von</label>
+        <input type="time" id="editFrom">
+      </div>
+      <div class="field">
+        <label>Bis</label>
+        <input type="time" id="editTo">
+      </div>
+      <div class="field">
+        <label>Pause (min)</label>
+        <input type="number" id="editBreak" min="0" step="5">
+      </div>
+      <div class="field">
+        <label>Kunde</label>
+        <select id="editCustomer" onchange="populateEditLocations(this.value,'')"></select>
+      </div>
+      <div class="field">
+        <label>Standort</label>
+        <select id="editLocation"></select>
+      </div>
+      <div class="field">
+        <label>Tätigkeit</label>
+        <select id="editTask">
+          <option value="">– Tätigkeit –</option>
+          <option value="Installation">Installation</option>
+          <option value="Wartung">Wartung</option>
+          <option value="Störung">Störung</option>
+          <option value="Sonstiges">Sonstiges</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Titel</label>
+        <input type="text" id="editTitle" placeholder="Kurzbeschreibung">
+      </div>
+    </div>
+    <div class="field" style="margin-top:0.5rem">
+      <label>Notiz</label>
+      <textarea id="editNote" rows="3" placeholder="Notizen..."></textarea>
+    </div>
+    <div class="edit-modal-actions">
+      <button class="btn-ghost" onclick="closeEditModal()">Abbrechen</button>
+      <button class="btn-primary" onclick="saveEditEntry()">Speichern</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
