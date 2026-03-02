@@ -175,10 +175,11 @@
   /* FORM */
   .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     margin-bottom: 1rem;
   }
+  .form-grid .field.wide { grid-column: 1 / -1; }
   .field { display: flex; flex-direction: column; gap: 0.35rem; }
   .field label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
 
@@ -723,6 +724,7 @@
     /* Quick fields: stacked */
     .quick-fields { grid-template-columns: 1fr; gap: 0.6rem; }
     .form-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .form-grid .field.wide { grid-column: 1 / -1; }
 
     /* Inputs: bigger for touch */
     input, select, textarea {
@@ -1170,7 +1172,6 @@
     <h1>BLITZ</h1>
     <span class="subtitle">Elektro · Energie & Gebäudetechnik</span>
     <span id="headerSyncDot" style="margin-left:auto;font-size:0.65rem;color:var(--muted);cursor:pointer" onclick="showPage('sync');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('syncTab').classList.add('active')" title="Sync-Status"></span>
-    <span id="offlineDot" style="width:8px;height:8px;border-radius:50%;background:#4caf50;display:inline-block;margin-left:0.4rem;vertical-align:middle;flex-shrink:0;transition:background 0.4s" title="Online"></span>
 </header>
 
   <div class="tabs no-print">
@@ -1925,6 +1926,10 @@ function addManualEntry() {
   const from = document.getElementById('manFrom').value;
   const to = document.getElementById('manTo').value;
   if (!date || !from || !to) { alert('Bitte Datum, Von und Bis ausfüllen.'); return; }
+  // Prüfe ob Bis vor Von liegt
+  const _fMins = parseInt(from.split(':')[0])*60 + parseInt(from.split(':')[1]);
+  const _tMins = parseInt(to.split(':')[0])*60 + parseInt(to.split(':')[1]);
+  if (_tMins < _fMins && !confirm('Achtung: "Bis" liegt vor "Von". Nachtschicht?\nOK = Speichern, Abbrechen = Korrigieren.')) return;
 
   const custSel = document.getElementById('manCustomer');
   const locSel = document.getElementById('manLocation');
@@ -2734,7 +2739,7 @@ function exportCSV() {
 function showPDFExportDialog(prefillFrom, prefillTo) {
   const sel = document.getElementById('pdfCustomer');
   sel.innerHTML = '<option value="">Alle Kunden</option>';
-  (data.customers || []).forEach(c => {
+  (data.customers || []).slice().sort((a, b) => a.name.localeCompare(b.name, 'de')).forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
     opt.textContent = c.name;
@@ -2926,7 +2931,7 @@ function exportPDF(fromDate, toDate, customerId) {
   <span>PHOENYXZZZ \u00b7 Elektro \u00b7 Energie &amp; Geb\u00e4udetechnik</span>
 </div>
 
-<script>window.onload = () => window.print();<\/script>
+<script>window.onload = () => { window.print(); window.addEventListener("afterprint", () => window.close()); };<\/script>
 </body>
 </html>`;
 
@@ -3591,6 +3596,10 @@ function saveQuickEntry() {
   const from = document.getElementById('quickFrom').value;
   const to   = document.getElementById('quickTo').value;
   if (!date || !from || !to) { alert('Bitte Datum, Von und Bis ausfüllen.'); return; }
+  // Prüfe ob Bis vor Von liegt
+  const _fMins = parseInt(from.split(':')[0])*60 + parseInt(from.split(':')[1]);
+  const _tMins = parseInt(to.split(':')[0])*60 + parseInt(to.split(':')[1]);
+  if (_tMins < _fMins && !confirm('Achtung: "Bis" liegt vor "Von". Nachtschicht?\nOK = Speichern, Abbrechen = Korrigieren.')) return;
 
   // New customer: create record on the fly
   const custSel = document.getElementById('quickCustomerSel');
@@ -3795,7 +3804,6 @@ function showNetworkToast(msg) {
 
 window.addEventListener('online',  () => { updateOnlineStatus(); showNetworkToast('✅ Wieder online'); });
 window.addEventListener('offline', () => { updateOnlineStatus(); showNetworkToast('⚠️ Offline – Daten werden lokal gespeichert'); });
-updateOnlineStatus();
 
 // ============================================================
 //  SERVICE WORKER REGISTRIERUNG
@@ -3863,6 +3871,10 @@ function saveEditEntry() {
   const to = document.getElementById('editTo').value;
   const date = document.getElementById('editDate').value;
   if (!date || !from || !to) { alert('Bitte Datum, Von und Bis ausfüllen.'); return; }
+  // Prüfe ob Bis vor Von liegt
+  const _fMins = parseInt(from.split(':')[0])*60 + parseInt(from.split(':')[1]);
+  const _tMins = parseInt(to.split(':')[0])*60 + parseInt(to.split(':')[1]);
+  if (_tMins < _fMins && !confirm('Achtung: "Bis" liegt vor "Von". Nachtschicht?\nOK = Speichern, Abbrechen = Korrigieren.')) return;
 
   e.date = date;
   e.from = from;
@@ -3922,7 +3934,7 @@ function deleteEntry(id) {
   <div class="edit-modal-box">
     <div class="edit-modal-title">Eintrag bearbeiten</div>
     <div class="form-grid">
-      <div class="field">
+      <div class="field wide">
         <label>Datum</label>
         <input type="date" id="editDate">
       </div>
@@ -3939,14 +3951,6 @@ function deleteEntry(id) {
         <input type="number" id="editBreak" min="0" step="5">
       </div>
       <div class="field">
-        <label>Kunde</label>
-        <select id="editCustomer" onchange="populateEditLocations(this.value,'')"></select>
-      </div>
-      <div class="field">
-        <label>Standort</label>
-        <select id="editLocation"></select>
-      </div>
-      <div class="field">
         <label>Tätigkeit</label>
         <select id="editTask">
           <option value="">– Tätigkeit –</option>
@@ -3956,7 +3960,15 @@ function deleteEntry(id) {
           <option value="Sonstiges">Sonstiges</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field wide">
+        <label>Kunde</label>
+        <select id="editCustomer" onchange="populateEditLocations(this.value,'')"></select>
+      </div>
+      <div class="field wide">
+        <label>Standort</label>
+        <select id="editLocation"></select>
+      </div>
+      <div class="field wide">
         <label>Titel</label>
         <input type="text" id="editTitle" placeholder="Kurzbeschreibung">
       </div>
