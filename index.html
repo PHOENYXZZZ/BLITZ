@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-title" content="BLITZ">
 <title>BLITZ – Zeiterfassung</title>
 <link rel="manifest" href="manifest.json">
@@ -12,17 +14,39 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
-    --bg: #0f0e0b;
-    --surface: #1a1916;
-    --surface2: #222019;
-    --border: #2e2c28;
-    --accent: #e8c547;
-    --accent2: #c4956a;
-    --text: #e8e4d9;
-    --muted: #7a7568;
-    --green: #6fcf97;
-    --red: #eb5757;
-    --blue: #5b9bd5;
+    --bg:       #f5f3ef;
+    --surface:  #ffffff;
+    --surface2: #ede9e1;
+    --border:   #ddd8ce;
+    --accent:   #b8872e;
+    --accent2:  #9a6e42;
+    --text:     #1c1a16;
+    --muted:    #8a8070;
+    --green:    #2a7a52;
+    --red:      #c44040;
+    --blue:     #3468b0;
+    --shadow:   0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+    --shadow-sm:0 1px 3px rgba(0,0,0,0.08);
+    --radius:   10px;
+    --radius-sm:6px;
+    --radius-lg:16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:       #111110;
+      --surface:  #1c1b18;
+      --surface2: #252420;
+      --border:   #333028;
+      --accent:   #e8c547;
+      --accent2:  #c4956a;
+      --text:     #e8e4d9;
+      --muted:    #7a7568;
+      --green:    #6fcf97;
+      --red:      #eb5757;
+      --blue:     #5b9bd5;
+      --shadow:   0 1px 4px rgba(0,0,0,0.3);
+      --shadow-sm:0 1px 3px rgba(0,0,0,0.25);
+    }
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -69,14 +93,14 @@
     display: flex;
     align-items: baseline;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 1.5rem;
+    padding-bottom: 1rem;
   }
   h1 {
     font-family: 'Fraunces', serif;
     font-weight: 700;
-    font-size: 2.6rem;
+    font-size: 2rem;
     color: var(--accent);
     letter-spacing: 4px;
     text-transform: uppercase;
@@ -96,7 +120,8 @@
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 2px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
     position: relative;
@@ -254,12 +279,14 @@
   .entry {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 2px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
     padding: 0.9rem 1.1rem;
     display: grid;
     grid-template-columns: 90px 1fr auto auto;
     gap: 0.75rem;
     align-items: center;
+    margin-bottom: 0.6rem;
     transition: border-color 0.15s;
     animation: slideIn 0.2s ease;
   }
@@ -399,7 +426,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-top: 2px solid var(--accent);
-    border-radius: 4px;
+    border-radius: var(--radius);
     padding: 1.5rem;
     width: 100%; max-width: 480px;
     max-height: 90vh; overflow-y: auto;
@@ -502,7 +529,8 @@
   /* WEEK GRID */
   .week-day-col {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 2px; margin-bottom: 0.5rem; overflow: hidden;
+    border-radius: var(--radius); margin-bottom: 0.6rem; overflow: hidden;
+    box-shadow: var(--shadow-sm);
   }
   .week-day-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -550,7 +578,7 @@
   }
   .month-cal-cell {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 2px; padding: 0.4rem; min-height: 70px;
+    border-radius: var(--radius-sm); padding: 0.4rem; min-height: 70px;
     font-size: 0.68rem; transition: border-color 0.15s; cursor: default;
     position: relative;
   }
@@ -584,7 +612,8 @@
   .year-month-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
   .year-month-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 2px; padding: 1rem; position: relative; overflow: hidden;
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    padding: 1rem; position: relative; overflow: hidden;
   }
   .year-month-card.has-entries { border-color: var(--border); }
   .year-month-card-name {
@@ -603,7 +632,7 @@
   .year-total-panel {
     display: flex; gap: 1rem; margin-bottom: 1.5rem;
     background: var(--surface); border: 1px solid var(--border);
-    border-top: 2px solid var(--accent); border-radius: 2px; padding: 1rem 1.5rem;
+    border-top: 2px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.5rem;
     flex-wrap: wrap;
   }
   .year-total-item { flex: 1; min-width: 120px; }
@@ -684,7 +713,8 @@
       display: flex !important;
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
       background: var(--surface);
-      border-top: 1px solid var(--border);
+      border-top: none;
+      box-shadow: 0 -1px 0 var(--border), var(--shadow);
       padding-bottom: env(safe-area-inset-bottom);
     }
     .bottom-nav-item {
@@ -694,7 +724,7 @@
       gap: 0.2rem; cursor: pointer;
       border: none; background: none;
       color: var(--muted); font-family: 'DM Mono', monospace;
-      font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.5px;
+      font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.3px;
       transition: color 0.15s; -webkit-tap-highlight-color: transparent;
     }
     .bottom-nav-item .nav-icon { font-size: 1.2rem; line-height: 1; }
@@ -920,7 +950,7 @@
   .quick-date-display {
     text-align: center; cursor: pointer; position: relative;
     padding: 0.6rem 1.5rem;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     min-width: 150px; transition: border-color 0.15s;
     -webkit-tap-highlight-color: transparent;
   }
@@ -972,7 +1002,7 @@
     width: 100%; padding: 1rem; border: none; border-radius: 10px;
     background: var(--accent); color: #0f0e0b;
     font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer;
     transition: background 0.2s, transform 0.1s; min-height: unset;
     -webkit-tap-highlight-color: transparent;
   }
@@ -986,7 +1016,8 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;
   }
   .mehr-saldo-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
     padding: 1rem; text-align: center;
   }
   .mehr-saldo-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.3rem; }
@@ -997,7 +1028,7 @@
   .mehr-menu-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 0.5rem; margin-top: 1rem; }
   .mehr-item {
     display: flex; align-items: center; gap: 0.9rem;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 0.9rem 1rem; cursor: pointer; text-align: left;
     color: var(--text); transition: all 0.15s; min-height: unset; width: 100%;
     -webkit-tap-highlight-color: transparent;
@@ -1165,7 +1196,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v44</div>
+<div class="version-badge">v45</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -1573,7 +1604,7 @@
         <button class="btn-ghost" onclick="navWeek(-1)">← Vorherige</button>
         <span id="weekRangeLabel" style="font-size:0.8rem;color:var(--accent)"></span>
         <button class="btn-ghost" onclick="navWeek(1)">Nächste →</button>
-        <button class="btn-ghost" style="margin-left:auto;font-size:0.75rem" onclick="exportCurrentWeekPDF()" title="Woche als PDF exportieren">&#128196; Exportieren</button>
+        <button class="btn-ghost" style="margin-left:auto;font-size:0.75rem" onclick="exportCurrentWeekPDF()" title="Woche als PDF exportieren">&#128196; PDF</button>
       </div>
       <div id="weekGrid"></div>
     </div>
@@ -1584,6 +1615,7 @@
         <button class="btn-ghost" onclick="navMonth(-1)">← Vorheriger</button>
         <span id="monthLabel" style="font-size:0.8rem;color:var(--accent)"></span>
         <button class="btn-ghost" onclick="navMonth(1)">Nächster →</button>
+        <button class="btn-ghost" style="margin-left:auto;font-size:0.75rem" onclick="exportCurrentMonthPDF()" title="Monat als PDF exportieren">&#128196; PDF</button>
       </div>
       <div id="monthGrid"></div>
     </div>
@@ -1594,6 +1626,7 @@
         <button class="btn-ghost" onclick="navYear(-1)">← Vorheriges</button>
         <span id="yearLabel" style="font-size:0.8rem;color:var(--accent)"></span>
         <button class="btn-ghost" onclick="navYear(1)">Nächstes →</button>
+        <button class="btn-ghost" style="margin-left:auto;font-size:0.75rem" onclick="exportCurrentYearPDF()" title="Jahr als PDF exportieren">&#128196; PDF</button>
       </div>
       <div id="yearGrid"></div>
     </div>
@@ -2798,7 +2831,19 @@ function confirmPDFExport() {
 function exportCurrentWeekPDF() {
   const monday = getWeekStart(weekOffset);
   const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-  showPDFExportDialog(isoDate(monday), isoDate(sunday));
+  exportPDF(isoDate(monday), isoDate(sunday));
+}
+
+function exportCurrentMonthPDF() {
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const last = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+  exportPDF(isoDate(base), isoDate(last));
+}
+
+function exportCurrentYearPDF() {
+  const y = new Date().getFullYear() + yearOffset;
+  exportPDF(`${y}-01-01`, `${y}-12-31`);
 }
 
 function exportPDF(fromDate, toDate, customerId) {
