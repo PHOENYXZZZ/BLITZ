@@ -3338,15 +3338,18 @@ async function syncPull() {
   setSyncStatus('busy', 'Lade Daten…');
   try {
     const uid = currentUser.id;
-    const [{ data: entriesRaw, error: eErr }, { data: deletedRaw }, { data: custsRaw, error: cErr }, { data: locsRaw, error: lErr }] = await Promise.all([
-      sb.from('entries').select('*').eq('user_id', uid).eq('deleted', false).order('date', { ascending: false }),
-      sb.from('entries').select('id').eq('user_id', uid).eq('deleted', true),
+    const rpcName  = currentUser.role === 'admin' ? 'get_all_entries_admin' : 'get_entries_for_code';
+    const rpcParam = currentUser.role === 'admin' ? { p_admin_code: currentUser.code } : { p_code: currentUser.code };
+    const [{ data: allEntriesRaw, error: eErr }, { data: custsRaw, error: cErr }, { data: locsRaw, error: lErr }] = await Promise.all([
+      sb.rpc(rpcName, rpcParam),
       sb.from('customers').select('*').eq('user_id', uid),
       sb.from('locations').select('*').eq('user_id', uid)
     ]);
     if (eErr) throw eErr;
     if (cErr) throw cErr;
     if (lErr) throw lErr;
+    const entriesRaw = (allEntriesRaw || []).filter(e => !e.deleted);
+    const deletedRaw = (allEntriesRaw || []).filter(e => e.deleted);
     data.entries = (entriesRaw || []).map(e => ({
       id: e.id, date: e.date, from: e.from_time, to: e.to_time,
       breakMin: e.break_min, customerId: e.customer_id, customerName: e.customer_name,
