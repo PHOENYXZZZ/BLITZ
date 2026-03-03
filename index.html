@@ -91,21 +91,22 @@
   /* HEADER */
   header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--border);
     padding-bottom: 1rem;
   }
+  .logo-wrap { display: flex; align-items: center; gap: 0.4rem; }
+  .logo-bolt { font-size: 1.5rem; line-height: 1; }
   h1 {
     font-family: 'Fraunces', serif;
     font-weight: 700;
-    font-size: 2rem;
+    font-size: 1.75rem;
     color: var(--accent);
-    letter-spacing: 4px;
+    letter-spacing: 5px;
     text-transform: uppercase;
   }
-  .subtitle { color: var(--muted); font-size: 0.75rem; }
   .version-badge {
     position: fixed; bottom: 0.4rem; right: 0.5rem;
     font-size: 0.65rem; color: var(--muted); opacity: 0.5;
@@ -442,28 +443,38 @@
   }
   .split-modal-title {
     font-size: 0.65rem; text-transform: uppercase;
-    letter-spacing: 2px; color: var(--muted); margin-bottom: 0.8rem;
+    letter-spacing: 2px; color: var(--muted); margin-bottom: 0.5rem;
+  }
+  .split-modal-desc {
+    font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.5;
   }
   .split-info {
     background: var(--surface2); border-radius: var(--radius-sm);
     padding: 0.6rem 0.8rem; margin-bottom: 1rem; font-size: 0.78rem;
   }
-  .split-segments { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+  .split-segments { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
   .split-segment {
     border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 0.7rem; display: grid; gap: 0.4rem;
-    grid-template-columns: 1fr 1fr; background: var(--bg);
+    padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
+    background: var(--bg);
   }
   .split-segment-header {
-    grid-column: 1 / -1; font-size: 0.65rem; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.65rem; color: var(--muted);
     text-transform: uppercase; letter-spacing: 1px;
   }
+  .split-seg-dur { font-size: 0.72rem; color: var(--accent); font-family: 'Fraunces', serif; text-transform: none; letter-spacing: 0; }
+  .split-time-row { display: flex; align-items: flex-end; gap: 0.5rem; }
+  .split-time-block { flex: 1; }
+  .split-time-readonly input { opacity: 0.5 !important; }
+  .split-time-arrow { color: var(--muted); padding-bottom: 0.4rem; font-size: 1rem; flex-shrink: 0; }
+  .split-field { display: flex; flex-direction: column; }
+  .split-field-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.25rem; }
   .split-segment input, .split-segment select {
     width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 4px; padding: 0.3rem 0.5rem;
+    border-radius: 4px; padding: 0.35rem 0.5rem; min-height: 38px;
     color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.8rem;
   }
-  .split-segment input[readonly] { opacity: 0.6; }
   .split-balance {
     font-size: 0.78rem; padding: 0.5rem 0.8rem;
     border-radius: var(--radius-sm); background: var(--surface2);
@@ -599,16 +610,16 @@
 
   .week-entries { padding: 0.5rem 0; }
   .week-entry-row {
-    display: grid; grid-template-columns: 80px 1fr auto;
-    gap: 0.5rem; align-items: center;
-    padding: 0.45rem 1rem;
+    display: grid; grid-template-columns: 85px 1fr auto;
+    gap: 0.5rem; align-items: start;
+    padding: 0.55rem 1rem;
     border-bottom: 1px solid var(--border);
     font-size: 0.78rem; transition: background 0.1s;
   }
   .week-entry-row:last-child { border-bottom: none; }
   .week-entry-row:hover { background: var(--surface2); }
-  .week-entry-time { color: var(--muted); font-size: 0.72rem; }
-  .week-entry-customer { color: var(--text); }
+  .week-entry-time { color: var(--text); opacity: 0.65; font-size: 0.75rem; padding-top: 0.05rem; }
+  .week-entry-customer { color: var(--text); font-weight: 500; }
   .week-entry-dur { color: var(--accent); font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 300; white-space: nowrap; }
   .week-day-empty { padding: 0.75rem 1rem; font-size: 0.75rem; color: var(--muted); font-style: italic; }
   .week-total-bar {
@@ -755,8 +766,8 @@
       position: sticky; top: 0; z-index: 90;
       background: var(--bg);
     }
-    h1 { font-size: 1.8rem; }
-    .subtitle { font-size: 0.65rem; }
+    h1 { font-size: 1.5rem; }
+    .logo-bolt { font-size: 1.3rem; }
 
     /* Obere Tab-Leiste ausblenden – ersetzt durch Bottom-Nav */
     .tabs { display: none; }
@@ -973,7 +984,9 @@
     /* Week view: compact */
     .week-day-col { margin-bottom: 0.4rem; }
     .week-day-date { font-size: 1.1rem; }
-    .week-entry-row { grid-template-columns: 70px 1fr auto; padding: 0.5rem 0.75rem; }
+    .week-entry-row { grid-template-columns: 70px 1fr auto; padding: 0.5rem 0.75rem; font-size: 0.73rem; }
+    .week-entry-time { font-size: 0.7rem; }
+    .week-entry-dur { font-size: 0.9rem; }
 
     /* Month calendar: hide trailing cells on mobile */
     .month-cal-cell { min-height: 55px; padding: 0.25rem; }
@@ -991,6 +1004,17 @@
 
     /* Wochensoll input on mobile */
     #wochensollInput { width: 50px !important; font-size: 1.2rem !important; }
+
+    /* iOS: font-size < 16px triggert automatischen Zoom → auf 1rem setzen */
+    input[type="text"], input[type="time"], input[type="date"],
+    input[type="number"], input[type="password"], select, textarea {
+      font-size: 1rem !important;
+    }
+
+    /* Split Modal: Felder iPhone-tauglich */
+    .split-segment input, .split-segment select { min-height: 44px; font-size: 0.95rem !important; }
+    .split-modal-box { padding: 1.25rem 1rem 1.5rem; }
+    .split-modal-desc { font-size: 0.72rem; }
   }
 
   /* ============================================================
@@ -1276,8 +1300,10 @@
 <div class="container" id="appContainer">
 
   <header>
-    <h1>BLITZ</h1>
-    <span class="subtitle">Elektro · Energie & Gebäudetechnik</span>
+    <div class="logo-wrap">
+      <span class="logo-bolt">⚡</span>
+      <h1>BLITZ</h1>
+    </div>
     <span id="headerSyncDot" style="margin-left:auto;font-size:0.65rem;color:var(--muted);cursor:pointer" onclick="showPage('sync');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('syncTab').classList.add('active')" title="Sync-Status"></span>
 </header>
 
@@ -4250,32 +4276,46 @@ function addSplitSegment() {
 
 function renderSplitSegments() {
   const list = document.getElementById('splitSegmentsList');
-  list.innerHTML = _splitSegments.map((seg, i) => `
+  const isLast = i => i === _splitSegments.length - 1;
+  list.innerHTML = _splitSegments.map((seg, i) => {
+    const durMins = toMin(seg.to) - toMin(seg.from);
+    const durStr = durMins > 0 ? fmtDur(durMins) : '–';
+    const isLastSeg = i === _splitSegments.length - 1;
+    return `
     <div class="split-segment">
-      <div class="split-segment-header">Segment ${i + 1}</div>
-      <div>
-        <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem">Von</div>
-        <input type="time" value="${seg.from}" readonly style="background:var(--surface2)">
+      <div class="split-segment-header">
+        <span>Abschnitt ${i + 1}</span>
+        <span class="split-seg-dur">${durStr}</span>
       </div>
-      <div>
-        <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem">Bis</div>
-        <input type="time" value="${seg.to}" onchange="updateSplitSegment(${i},'to',this.value)">
+      <div class="split-time-row">
+        <div class="split-time-block split-time-readonly">
+          <div class="split-field-label">Von</div>
+          <input type="time" value="${seg.from}" readonly>
+        </div>
+        <span class="split-time-arrow">→</span>
+        <div class="split-time-block">
+          <div class="split-field-label">Bis${!isLastSeg ? ' <span style="color:var(--accent);font-size:0.6rem">✎</span>' : ''}</div>
+          <input type="time" value="${seg.to}"
+            ${isLastSeg ? 'readonly style="opacity:0.5"' : `onchange="updateSplitSegment(${i},'to',this.value)"`}>
+        </div>
       </div>
-      <div>
-        <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem">Tätigkeit</div>
+      <div class="split-field">
+        <div class="split-field-label">Tätigkeit</div>
         <select onchange="updateSplitSegment(${i},'task',this.value)">
-          <option value="" ${!seg.task ? 'selected' : ''}>– Tätigkeit –</option>
+          <option value="" ${!seg.task ? 'selected' : ''}>– Tätigkeit wählen –</option>
           <option value="Installation" ${seg.task==='Installation'?'selected':''}>Installation</option>
           <option value="Wartung"      ${seg.task==='Wartung'?'selected':''}>Wartung</option>
           <option value="Störung"      ${seg.task==='Störung'?'selected':''}>Störung</option>
           <option value="Sonstiges"    ${seg.task==='Sonstiges'?'selected':''}>Sonstiges</option>
         </select>
       </div>
-      <div>
-        <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.2rem">Titel</div>
-        <input type="text" value="${escapeHtml(seg.title)}" placeholder="Kurzbeschreibung" onchange="updateSplitSegment(${i},'title',this.value)">
+      <div class="split-field">
+        <div class="split-field-label">Titel / Beschreibung</div>
+        <input type="text" value="${escapeHtml(seg.title)}" placeholder="z.B. Schaltschrank Erdgeschoss"
+          onchange="updateSplitSegment(${i},'title',this.value)">
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   updateSplitBalance();
 }
 
@@ -4424,12 +4464,13 @@ function confirmSplit() {
 <!-- =================== SPLIT MODAL =================== -->
 <div class="split-modal-overlay hidden" id="splitModalOverlay" onclick="if(event.target===this)closeSplitModal()">
   <div class="split-modal-box">
-    <div class="split-modal-title">⚡ Eintrag aufteilen</div>
+    <div class="split-modal-title">Eintrag aufteilen</div>
+    <div class="split-modal-desc">Teile diesen Eintrag in mehrere Abschnitte mit unterschiedlichen Tätigkeiten auf. Die „Bis"-Zeit jedes Abschnitts (außer dem letzten) ist editierbar – sie bestimmt die Grenze zum nächsten Abschnitt.</div>
     <div class="split-info" id="splitInfoHeader"></div>
     <div class="split-segments" id="splitSegmentsList"></div>
     <div class="split-balance" id="splitBalance"></div>
     <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
-      <button class="btn-ghost" style="font-size:0.75rem" onclick="addSplitSegment()">+ Segment hinzufügen</button>
+      <button class="btn-ghost" style="font-size:0.75rem" onclick="addSplitSegment()">+ Abschnitt hinzufügen</button>
     </div>
     <div class="split-modal-actions">
       <button class="btn-ghost" onclick="closeSplitModal()">Abbrechen</button>
