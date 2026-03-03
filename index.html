@@ -1883,6 +1883,32 @@ function escapeHtml(str) {
 }
 
 // ============================================================
+//  TOAST NOTIFICATIONS
+// ============================================================
+function showToast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('toast-show'));
+  setTimeout(() => { el.classList.remove('toast-show'); setTimeout(() => el.remove(), 280); }, 2800);
+}
+
+// ── Live-Dauerberechnung ──────────────────────────────────
+function updateDurPreview(fromId, toId, breakId, previewId) {
+  const from = document.getElementById(fromId)?.value;
+  const to   = document.getElementById(toId)?.value;
+  const brk  = parseInt(document.getElementById(breakId)?.value) || 0;
+  const el   = document.getElementById(previewId);
+  if (!el) return;
+  if (!from || !to) { el.textContent = ''; return; }
+  const dur = calcDuration(from, to, brk);
+  if (dur.total <= 0) { el.style.color = 'var(--red)'; el.textContent = '→ Zeitangabe prüfen'; return; }
+  el.style.color = 'var(--accent)';
+  el.textContent = `→ ${dur.h}h ${String(dur.m).padStart(2,'0')}m netto`;
+}
+
+// ============================================================
 //  STATE
 // ============================================================
 let timerStart = null, timerInterval = null, onBreak = false, breakStart = null, totalBreakMs = 0;
@@ -3406,14 +3432,14 @@ async function renderBenutzerPage() {
   const container = document.getElementById('benutzerList');
   container.innerHTML = '<div style="color:var(--muted);padding:1rem 0;text-align:center">Lade…</div>';
   const { data: users, error } = await sb.from('profiles').select('*').order('name');
-  if (error) { container.innerHTML = `<div style="color:var(--red)">${error.message}</div>`; return; }
+  if (error) { container.innerHTML = `<div style="color:var(--red)">${escapeHtml(error.message)}</div>`; return; }
   container.innerHTML = users.map(u => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--border)">
       <div>
-        <div style="font-weight:500">${u.name}</div>
-        <div style="font-size:0.72rem;color:var(--muted)">Code: <code>${u.code}</code> · ${u.role === 'admin' ? 'Admin' : 'Mitarbeiter'}</div>
+        <div style="font-weight:500">${escapeHtml(u.name)}</div>
+        <div style="font-size:0.72rem;color:var(--muted)">Code: <code>${escapeHtml(u.code)}</code> · ${u.role === 'admin' ? 'Admin' : 'Mitarbeiter'}</div>
       </div>
-      ${u.id !== currentUser.id ? `<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.72rem" onclick="deleteUser('${u.id}','${u.name}')">✕</button>` : '<span style="font-size:0.72rem;color:var(--muted)">Du</span>'}
+      ${u.id !== currentUser.id ? `<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.72rem" onclick="deleteUser('${u.id}',this)">✕</button>` : '<span style="font-size:0.72rem;color:var(--muted)">Du</span>'}
     </div>`).join('');
 }
 
@@ -3439,7 +3465,8 @@ async function addUser() {
   }
 }
 
-async function deleteUser(id, name) {
+async function deleteUser(id, btn) {
+  const name = btn.closest('div[style]')?.querySelector('div[style*="font-weight"]')?.textContent || 'Benutzer';
   if (!confirm(`${name} wirklich löschen? Alle Einträge dieser Person werden ebenfalls gelöscht.`)) return;
   const sb = getSupabase();
   const { error } = await sb.from('profiles').delete().eq('id', id);
