@@ -3216,10 +3216,9 @@ function setSyncStatus(state, text, sub) {
   if (bar) {
     bar.className = `sync-status-bar sync-${state}`;
     const icons = { idle: '○', ok: '✓', busy: '⟳', error: '✕' };
-    icon.textContent = icons[state] || '○';
-    icon.className = state === 'busy' ? 'spin' : '';
-    txt.textContent = text;
-    if (sub) last.textContent = sub;
+    if (icon) { icon.textContent = icons[state] || '○'; icon.className = state === 'busy' ? 'spin' : ''; }
+    if (txt) txt.textContent = text;
+    if (sub && last) last.textContent = sub;
   }
   if (dot) {
     const dotIcons = { idle: '', ok: '✓ Sync', busy: '⟳ Sync', error: '✕ Sync' };
@@ -3335,7 +3334,6 @@ async function syncPush() {
   setSyncStatus('busy', 'Lade hoch…');
   try {
     const uid = currentUser.id;
-    const now = new Date().toISOString();
     const allEntries = [
       ...data.entries.map(e => ({
         id: String(e.id), date: e.date,
@@ -3343,11 +3341,12 @@ async function syncPush() {
         customer_id: e.customerId || null, customer_name: e.customerName || null,
         location_id: e.locationId || null, location_name: e.locationName || null,
         task: e.task || null, title: e.title || null, note: e.note || null,
-        transferred: e.transferred || false, deleted: false, updated_at: now
+        transferred: e.transferred || false, deleted: false
       })),
       ...(data.deletedIds || []).map(id => ({
         id: String(id), date: '1970-01-01',
-        deleted: true, updated_at: now
+        from_time: '00:00', to_time: '00:00', break_min: 0,
+        deleted: true
       }))
     ];
     if (allEntries.length > 0) {
@@ -3459,6 +3458,7 @@ async function renderBenutzerPage() {
   if (!currentUser || currentUser.role !== 'admin') return;
   const sb = getSupabase();
   const container = document.getElementById('benutzerList');
+  if (!container) return;
   container.innerHTML = '<div style="color:var(--muted);padding:1rem 0;text-align:center">Lade…</div>';
   const { data: users, error } = await sb.from('profiles').select('*').order('name');
   if (error) { container.innerHTML = `<div style="color:var(--red)">${escapeHtml(error.message)}</div>`; return; }
@@ -3468,7 +3468,7 @@ async function renderBenutzerPage() {
         <div style="font-weight:500">${escapeHtml(u.name)}</div>
         <div style="font-size:0.72rem;color:var(--muted)">Code: <code>${escapeHtml(u.code)}</code> · ${u.role === 'admin' ? 'Admin' : 'Mitarbeiter'}</div>
       </div>
-      ${u.id !== currentUser.id ? `<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.72rem" onclick="deleteUser('${u.id}',this)">✕</button>` : '<span style="font-size:0.72rem;color:var(--muted)">Du</span>'}
+      ${u.id !== currentUser.id ? `<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.72rem" onclick="deleteUser('${escapeHtml(u.id)}',this)">✕</button>` : '<span style="font-size:0.72rem;color:var(--muted)">Du</span>'}
     </div>`).join('');
 }
 
@@ -3524,6 +3524,7 @@ async function renderTeamPage() {
 
   const month = sel?.value || new Date().toISOString().slice(0,7);
   const container = document.getElementById('teamContainer');
+  if (!container) return;
   container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Lade…</div>';
 
   const { data: allEntries, error } = await sb
@@ -3535,7 +3536,7 @@ async function renderTeamPage() {
     .order('date', { ascending: false });
 
   if (error) {
-    container.innerHTML = `<div style="color:var(--red)">Fehler: ${error.message}</div>`;
+    container.innerHTML = `<div style="color:var(--red)">Fehler: ${escapeHtml(error.message)}</div>`;
     return;
   }
 

@@ -1,4 +1,4 @@
-const CACHE = 'zeitwerk-v42';
+const CACHE = 'blitz-v49';
 const ASSETS = ['./'];
 
 self.addEventListener('install', event => {
