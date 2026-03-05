@@ -1967,14 +1967,14 @@ function load() {
   // Migration: Nummer-IDs → UUIDs (Entries, Kunden, Standorte)
   let migrated = false;
   for (const e of (data.entries || [])) {
-    if (typeof e.id === 'number' || (typeof e.id === 'string' && /^\d/.test(e.id))) {
+    if (!isUUID(String(e.id))) {
       e.id = crypto.randomUUID();
       migrated = true;
     }
   }
   const idMap = {};
   for (const c of (data.customers || [])) {
-    if (typeof c.id === 'number' || (typeof c.id === 'string' && /^\d/.test(c.id))) {
+    if (!isUUID(String(c.id))) {
       const oldId = String(c.id);
       c.id = crypto.randomUUID();
       idMap[oldId] = c.id;
@@ -1982,7 +1982,7 @@ function load() {
     }
   }
   for (const l of (data.locations || [])) {
-    if (typeof l.id === 'number' || (typeof l.id === 'string' && /^\d/.test(l.id))) {
+    if (!isUUID(String(l.id))) {
       l.id = crypto.randomUUID();
       migrated = true;
     }
@@ -3439,12 +3439,36 @@ async function syncPush() {
   syncBusy = false;
 }
 
+function deduplicateLocalEntries() {
+  if (!data.entries || data.entries.length === 0) return false;
+  const seen = new Map();
+  const toDelete = [];
+  const sorted = [...data.entries].sort((a, b) => (a.date + a.from) < (b.date + b.from) ? -1 : 1);
+  for (const e of sorted) {
+    const key = `${e.date}|${e.from}|${e.to}|${String(e.customerId||'')}|${e.task||''}`;
+    if (seen.has(key)) {
+      toDelete.push(e.id);
+    } else {
+      seen.set(key, e.id);
+    }
+  }
+  if (toDelete.length > 0) {
+    data.entries = data.entries.filter(e => !toDelete.includes(e.id));
+    data.deletedIds = [...new Set([...(data.deletedIds || []), ...toDelete])];
+    save();
+    showToast(`${toDelete.length} Duplikat${toDelete.length === 1 ? '' : 'e'} bereinigt`);
+    return true;
+  }
+  return false;
+}
+
 async function syncPull() {
   if (!currentUser) return;
   const sb = getSupabase();
   if (!sb) return;
   syncBusy = true;
   setSyncStatus('busy', 'Lade Daten…');
+  let hadDuplicates = false;
   try {
     const uid = currentUser.id;
     const rpcName  = currentUser.role === 'admin' ? 'get_all_entries_admin' : 'get_entries_for_code';
@@ -3457,9 +3481,19 @@ async function syncPull() {
     if (eErr) throw eErr;
     if (cErr) throw cErr;
     if (lErr) throw lErr;
-    const entriesRaw = (allEntriesRaw || []).filter(e => !e.deleted);
-    const deletedRaw = (allEntriesRaw || []).filter(e => e.deleted);
-    data.entries = (entriesRaw || []).map(e => ({
+    // Lokale Tombstones merken, bevor wir data.deletedIds überschreiben
+    const localDeletedIds = data.deletedIds || [];
+    // Nur eigene Einträge (non-admin: user_id-Filter als Sicherheitsnetz gegen RPC-Bugs)
+    const allRaw = allEntriesRaw || [];
+    const entriesRaw = allRaw.filter(e => !e.deleted && (currentUser.role === 'admin' || e.user_id === currentUser.id));
+    const deletedRaw = allRaw.filter(e => e.deleted && (currentUser.role === 'admin' || e.user_id === currentUser.id));
+    // Dedup by ID (server-seitige Duplikate verhindern)
+    const seenIds = new Set();
+    const uniqueEntries = entriesRaw.filter(e => {
+      if (seenIds.has(e.id)) return false;
+      seenIds.add(e.id); return true;
+    });
+    data.entries = uniqueEntries.map(e => ({
       id: e.id, date: e.date, from: e.from_time, to: e.to_time,
       breakMin: e.break_min, customerId: e.customer_id, customerName: e.customer_name,
       locationId: e.location_id, locationName: e.location_name,
@@ -3467,7 +3501,10 @@ async function syncPull() {
     }));
     data.customers = (custsRaw || []).map(c => ({ id: c.id, name: c.name }));
     data.locations = (locsRaw || []).map(l => ({ id: l.id, customerId: l.customer_id, name: l.name }));
-    data.deletedIds = (deletedRaw || []).map(e => e.id);
+    // deletedIds MERGEN statt überschreiben (lokale Tombstones dürfen nicht verloren gehen)
+    data.deletedIds = [...new Set([...localDeletedIds, ...(deletedRaw || []).map(e => e.id)])];
+    // Content-basierte Duplikatbereinigung (One-Time Cleanup)
+    hadDuplicates = deduplicateLocalEntries();
     localStorage.setItem('blitz_v2', JSON.stringify(data));
     renderEntries();
     renderSaldo();
@@ -3481,11 +3518,13 @@ async function syncPull() {
     setSyncStatus('error', 'Download fehlgeschlagen: ' + e.message);
   }
   syncBusy = false;
+  // Duplikat-Tombstones auf Server propagieren
+  if (hadDuplicates) await syncPush();
 }
 
 async function syncNow() {
-  await syncPull();
   await syncPush();
+  await syncPull();
 }
 
 function setupRealtimeSync() {
@@ -4257,7 +4296,7 @@ function deleteEntry(id) {
     renderSaldo();
     if (getAutoSyncEnabled()) {
       clearTimeout(syncPushTimer);
-      syncNow();
+      syncPush(); // only push – no pull (pull would restore the deleted entry)
     } else {
       clearTimeout(syncPushTimer); // cancel debounce, push tombstone immediately
       syncPush();
