@@ -1315,7 +1315,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v55.1</div>
+<div class="version-badge">v55.2</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -2043,6 +2043,23 @@ function load() {
     if (e.customerId && idMap[e.customerId]) e.customerId = idMap[e.customerId];
   }
   if (migrated) { data.deletedIds = []; localStorage.setItem('blitz_v2', JSON.stringify(data)); }
+  // Deduplizierung auch bei localStorage-Daten (Altlast-Bereinigung)
+  {
+    const seen = new Map();
+    const dupeIds = new Set();
+    for (const e of (data.entries || [])) {
+      const key = `${e.userId || ''}|${e.date}|${e.from}|${e.to}|${e.customerName || ''}|${e.task || ''}`;
+      if (seen.has(key)) { dupeIds.add(e.id); } else { seen.set(key, e); }
+    }
+    if (dupeIds.size > 0) {
+      console.log(`[BLITZ] load(): ${dupeIds.size} localStorage-Duplikate entfernt`);
+      data.entries = data.entries.filter(e => !dupeIds.has(e.id));
+      // Duplikate als gelöscht markieren, damit syncPush sie in DB löscht
+      if (!data.deletedIds) data.deletedIds = [];
+      for (const id of dupeIds) { if (!data.deletedIds.includes(id)) data.deletedIds.push(id); }
+      localStorage.setItem('blitz_v2', JSON.stringify(data));
+    }
+  }
 }
 function save() { localStorage.setItem('blitz_v2', JSON.stringify(data)); }
 
@@ -2294,10 +2311,20 @@ function taskClass(task) {
 //  RENDER ENTRIES
 // ============================================================
 function getOwnEntries() {
+  let entries;
   if (!currentUser || currentUser.role !== 'admin' || adminShowAll) {
-    return data.entries;
+    entries = data.entries;
+  } else {
+    entries = data.entries.filter(e => e.userId === currentUser.id || !e.userId);
   }
-  return data.entries.filter(e => e.userId === currentUser.id || !e.userId);
+  // Safety-net Dedup: verhindert doppelte Anzeige selbst wenn DB-Duplikate durchrutschen
+  const seen = new Set();
+  return entries.filter(e => {
+    const key = `${e.userId || ''}|${e.date}|${e.from}|${e.to}|${e.customerName || ''}|${e.task || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function setAdminView(showAll) {
@@ -3636,14 +3663,20 @@ async function syncPull() {
         }
       }
       if (dupeIds.size > 0) {
-        console.log(`[BLITZ] ${dupeIds.size} Duplikate erkannt und ausgeblendet`);
+        console.log(`[BLITZ] syncPull: ${dupeIds.size} Duplikate erkannt → werden gelöscht`);
         mappedEntries = mappedEntries.filter(e => !dupeIds.has(e.id));
+        // Duplikate in DB löschen: als deletedIds markieren, syncPush sendet sie als deleted=true
+        if (!data.deletedIds) data.deletedIds = [];
+        for (const id of dupeIds) { if (!data.deletedIds.includes(id)) data.deletedIds.push(id); }
       }
     }
     data.entries = mappedEntries;
     data.customers = (custsRaw || []).map(c => ({ id: c.id, name: c.name }));
     data.locations = (locsRaw || []).map(l => ({ id: l.id, customerId: l.customer_id, name: l.name }));
-    data.deletedIds = (deletedRaw || []).map(e => e.id);
+    // deletedIds: bestehende (inkl. gerade erkannte Duplikate) mit DB-gelöschten MERGEN
+    const existingDeleted = new Set(data.deletedIds || []);
+    for (const e of (deletedRaw || [])) existingDeleted.add(e.id);
+    data.deletedIds = [...existingDeleted];
     localStorage.setItem('blitz_v2', JSON.stringify(data));
     renderEntries();
     renderSaldo();

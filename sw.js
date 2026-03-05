@@ -1,4 +1,4 @@
-const CACHE = 'blitz-v55.1';
+const CACHE = 'blitz-v55.2';
 const ASSETS = ['./'];
 
 self.addEventListener('install', event => {
