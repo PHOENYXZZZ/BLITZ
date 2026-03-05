@@ -1315,7 +1315,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v55</div>
+<div class="version-badge">v55.1</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -2226,13 +2226,6 @@ function addManualEntry() {
   ['manFrom', 'manTo', 'manNote', 'manTitle'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('manBreak').value = '0';
 }
-
-// ============================================================
-//  AUTO-SYNC
-// ============================================================
-const AUTO_SYNC_KEY = 'blitz_auto_sync';
-function getAutoSyncEnabled() { return localStorage.getItem(AUTO_SYNC_KEY) === 'true'; }
-function setAutoSyncEnabled(v) { localStorage.setItem(AUTO_SYNC_KEY, v ? 'true' : 'false'); }
 
 // ============================================================
 //  ÜBERLAPPUNGSCHECK
@@ -3628,25 +3621,23 @@ async function syncPull() {
       task: e.task, title: e.title, note: e.note, transferred: e.transferred,
       userId: e.user_id || null, userName: e.user_name || null
     }));
-    // Deduplizierung: gleiche Einträge (Datum+Zeit+Kunde+Aufgabe) unter verschiedenen Usern → nur Original behalten
-    if (currentUser && currentUser.role === 'admin') {
+    // Deduplizierung: identische Einträge (gleicher User + Datum + Zeit + Kunde + Aufgabe) → nur einen behalten
+    {
       const seen = new Map();
-      const dupes = [];
+      const dupeIds = new Set();
       for (const e of mappedEntries) {
-        const key = `${e.date}|${e.from}|${e.to}|${e.customerName || ''}|${e.task || ''}`;
-        if (!seen.has(key)) {
-          seen.set(key, e);
+        // Schlüssel: User + Datum + Zeit + Kunde + Aufgabe
+        const key = `${e.userId || ''}|${e.date}|${e.from}|${e.to}|${e.customerName || ''}|${e.task || ''}`;
+        if (seen.has(key)) {
+          // Duplikat gefunden → diese ID als Duplikat markieren
+          dupeIds.add(e.id);
         } else {
-          const prev = seen.get(key);
-          // Wenn gleicher User → kein Duplikat (verschiedene Einträge am gleichen Tag sind ok)
-          if (prev.userId === e.userId) continue;
-          // Admin-Kopie ist das Duplikat → entfernen
-          if (e.userId === currentUser.id) { dupes.push(e.id); }
-          else if (prev.userId === currentUser.id) { dupes.push(prev.id); seen.set(key, e); }
+          seen.set(key, e);
         }
       }
-      if (dupes.length > 0) {
-        mappedEntries = mappedEntries.filter(e => !dupes.includes(e.id));
+      if (dupeIds.size > 0) {
+        console.log(`[BLITZ] ${dupeIds.size} Duplikate erkannt und ausgeblendet`);
+        mappedEntries = mappedEntries.filter(e => !dupeIds.has(e.id));
       }
     }
     data.entries = mappedEntries;
@@ -3816,7 +3807,7 @@ async function renderTeamPage() {
   container.innerHTML = html;
 }
 
-// Override save() to trigger auto-sync push with debounce
+// Auto-sync: bei jedem Speichern nach 5s automatisch pushen
 const _originalSave = save;
 function save() {
   localStorage.setItem('blitz_v2', JSON.stringify(data));
@@ -4431,7 +4422,6 @@ function saveEditEntry() {
   renderEntries();
   renderSaldo();
   closeEditModal();
-  if (getAutoSyncEnabled()) syncNow();
 }
 
 function deleteEntry(id) {
@@ -4649,7 +4639,6 @@ function confirmSplit() {
   renderSaldo();
   closeSplitModal();
   showToast(`✓ In ${n} Segmente aufgeteilt`, 'success');
-  if (getAutoSyncEnabled()) syncNow();
 }
 </script>
 

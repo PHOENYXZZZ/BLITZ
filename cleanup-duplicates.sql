@@ -1,20 +1,39 @@
--- Duplikate löschen: Admin-Kopien von Mitarbeiter-Einträgen entfernen
--- Einfach komplett im Supabase SQL Editor ausführen
+-- Duplikate löschen: Identische Einträge (gleicher User, Datum, Zeit, Kunde, Aufgabe)
+-- Behält jeweils den ÄLTESTEN Eintrag (kleinste ID) und löscht alle Kopien.
+-- Einfach komplett im Supabase SQL Editor ausführen.
 
+-- Schritt 1: VORSCHAU - zeigt was gelöscht wird
+SELECT
+  e.id,
+  e.user_id,
+  p.name AS user_name,
+  e.date,
+  e.from_time,
+  e.to_time,
+  e.customer_name,
+  e.task
+FROM entries e
+JOIN profiles p ON p.id = e.user_id
+WHERE e.deleted = false
+  AND e.id NOT IN (
+    SELECT MIN(e2.id)
+    FROM entries e2
+    WHERE e2.deleted = false
+    GROUP BY e2.user_id, e2.date, e2.from_time, e2.to_time,
+             COALESCE(e2.customer_name, ''), COALESCE(e2.task, '')
+  )
+ORDER BY e.date DESC, e.from_time;
+
+-- Schritt 2: LÖSCHEN - entfernt alle Duplikate (soft-delete)
+-- WICHTIG: Erst Schritt 1 prüfen, dann diesen Block ausführen!
+/*
 UPDATE entries SET deleted = true
-WHERE id IN (
-  SELECT e1.id
-  FROM entries e1
-  JOIN entries e2 ON
-    e1.date = e2.date
-    AND e1.from_time = e2.from_time
-    AND e1.to_time = e2.to_time
-    AND COALESCE(e1.customer_name, '') = COALESCE(e2.customer_name, '')
-    AND COALESCE(e1.task, '') = COALESCE(e2.task, '')
-    AND e1.user_id != e2.user_id
-    AND e1.id != e2.id
-    AND e1.deleted = false
-    AND e2.deleted = false
-  JOIN profiles p1 ON p1.id = e1.user_id
-  WHERE p1.role = 'admin'
-);
+WHERE deleted = false
+  AND id NOT IN (
+    SELECT MIN(e2.id)
+    FROM entries e2
+    WHERE e2.deleted = false
+    GROUP BY e2.user_id, e2.date, e2.from_time, e2.to_time,
+             COALESCE(e2.customer_name, ''), COALESCE(e2.task, '')
+  );
+*/
