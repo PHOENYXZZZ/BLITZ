@@ -14,6 +14,8 @@
 -- IMPORTANT: Run this migration in your Supabase SQL Editor.
 -- ============================================================
 
+DROP FUNCTION IF EXISTS get_all_entries_admin(text);
+
 CREATE OR REPLACE FUNCTION get_all_entries_admin(p_admin_code text)
 RETURNS jsonb
 LANGUAGE plpgsql
