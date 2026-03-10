@@ -59,23 +59,13 @@ $$;
 --  Löscht serverseitige Duplikate (gleicher User, gleiches Datum,
 --  gleiche Zeiten) und behält nur den ältesten Eintrag.
 
--- Erst prüfen wieviele Duplikate es gibt:
--- SELECT count(*) FROM (
---   SELECT id, ROW_NUMBER() OVER (
---     PARTITION BY user_id, date, from_time, to_time, customer_name, task
---     ORDER BY created_at ASC, id ASC
---   ) as rn
---   FROM entries
---   WHERE deleted = false
--- ) sub WHERE rn > 1;
-
 -- Duplikate löschen (behält den ältesten Eintrag pro Gruppe):
 DELETE FROM entries
 WHERE id IN (
   SELECT id FROM (
     SELECT id, ROW_NUMBER() OVER (
       PARTITION BY user_id, date, from_time, to_time, COALESCE(customer_name,''), COALESCE(task,'')
-      ORDER BY created_at ASC NULLS LAST, id ASC
+      ORDER BY updated_at ASC NULLS LAST, id ASC
     ) as rn
     FROM entries
     WHERE deleted = false
