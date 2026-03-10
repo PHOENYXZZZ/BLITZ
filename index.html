@@ -1296,7 +1296,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v55</div>
+<div class="version-badge">v56</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -1996,6 +1996,8 @@ function load() {
 function save() { localStorage.setItem('blitz_v2', JSON.stringify(data)); }
 
 load();
+// Beim Start: existierende Duplikate bereinigen (falls von früheren Bugs vorhanden)
+if (typeof deduplicateLocalEntries === 'function') deduplicateLocalEntries();
 
 // Timer-Wiederherstellung nach App-Neustart
 (function restoreTimer() {
@@ -3522,6 +3524,7 @@ async function syncPull() {
 }
 
 async function syncNow() {
+  clearTimeout(syncPushTimer); // Debounced Push abbrechen, da wir jetzt sofort pushen
   await syncPush();
   await syncPull();
 }
@@ -3670,7 +3673,8 @@ async function renderTeamPage() {
 const _originalSave = save;
 function save() {
   localStorage.setItem('blitz_v2', JSON.stringify(data));
-  if (currentUser) {
+  // Keinen Push schedulen wenn gerade ein Sync läuft (verhindert Endlosschleife)
+  if (currentUser && !syncBusy && getAutoSyncEnabled()) {
     clearTimeout(syncPushTimer);
     syncPushTimer = setTimeout(() => syncPush(), 5000);
   }
