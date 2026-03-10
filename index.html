@@ -113,6 +113,26 @@
     font-family: 'DM Mono', monospace; letter-spacing: 1px;
     z-index: 50; pointer-events: none; user-select: none;
   }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: none; border: none; color: var(--accent); cursor: pointer;
+    font-size: 0.8rem; font-family: 'DM Mono', monospace;
+    padding: 0.5rem 0; margin-bottom: 0.75rem;
+  }
+  .back-btn:active { opacity: 0.6; }
+  .scroll-top-btn {
+    position: fixed; bottom: 5rem; right: 1rem; z-index: 90;
+    background: var(--accent); color: var(--bg); border: none; border-radius: 50%;
+    width: 44px; height: 44px; font-size: 1.1rem; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); display: none;
+    align-items: center; justify-content: center;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .scroll-top-btn.visible { display: flex; }
+  .scroll-top-btn:active { transform: scale(0.9); }
+  @media (max-width: 640px) {
+    .scroll-top-btn { bottom: calc(env(safe-area-inset-bottom) + 72px); }
+  }
   @media (max-width: 640px) {
     .version-badge { bottom: calc(env(safe-area-inset-bottom) + 68px); }
   }
@@ -1270,7 +1290,7 @@
 <!-- PIN LOCK OVERLAY -->
 <div class="pin-overlay hidden" id="pinOverlay">
   <div class="pin-logo">BLITZ</div>
-  <div class="pin-subtitle">Elektro · Energie & Gebäudetechnik</div>
+  <div class="pin-subtitle">Zeiterfassung</div>
   <div class="pin-mode-label" id="pinModeLabel">PIN eingeben</div>
   <div class="pin-dots" id="pinDots">
     <div class="pin-dot" id="pd0"></div>
@@ -1296,7 +1316,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v57</div>
+<div class="version-badge">v59</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -1513,6 +1533,7 @@
 
   <!-- =================== ZEITERFASSUNG =================== -->
   <div id="page-zeiterfassung" class="page">
+    <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
 
     <div class="panel panel-accent">
       <div class="live-time" id="liveClock">00:00:00</div>
@@ -1689,6 +1710,7 @@
       <button class="btn-export" onclick="exportCSV()">⬇ CSV</button>
       <button class="btn-ghost" onclick="showPDFExportDialog()">⬇ PDF Stundenzettel</button>
     </div>
+    <button class="scroll-top-btn no-print" id="scrollTopBtn" onclick="scrollToToday()" title="Zum heutigen Tag">↑</button>
   </div>
 
   <!-- =================== ÜBERSICHT =================== -->
@@ -1737,6 +1759,7 @@
 
   <!-- =================== AUSWERTUNG =================== -->
   <div id="page-auswertung" class="page">
+    <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
 
     <div class="panel-title" style="margin-bottom:1rem">Monatsfilter</div>
     <div class="filter-row" style="margin-bottom:1.5rem">
@@ -1755,6 +1778,7 @@
 
   <!-- =================== STAMMDATEN =================== -->
   <div id="page-stammdaten" class="page">
+    <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
     <div class="panel">
       <div class="panel-title">Kunden & Standorte verwalten</div>
       <div class="stamm-grid">
@@ -1802,6 +1826,7 @@
     </div>
   </div>
   <div id="page-sync" class="page">
+    <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
     <div id="syncStatusBar" class="sync-status-bar sync-idle">
       <span id="syncStatusIcon">○</span>
       <span id="syncStatusText">Nicht angemeldet</span>
@@ -1862,6 +1887,7 @@
   </div>
 
   <div id="page-benutzer" class="page">
+    <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
     <div class="panel">
       <div class="panel-title">Benutzer anlegen</div>
       <div style="display:flex;flex-direction:column;gap:0.6rem">
@@ -2627,6 +2653,11 @@ function renderWeekView() {
   </div>`;
 
   document.getElementById('weekGrid').innerHTML = html;
+  // Auto-Scroll zum heutigen Tag (besonders auf dem Handy wichtig)
+  requestAnimationFrame(() => {
+    const todayEl = document.querySelector('.week-day-today');
+    if (todayEl) todayEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 }
 
 function renderMonthView() {
@@ -2706,6 +2737,11 @@ function renderMonthView() {
   wSummary += `</div>`;
 
   document.getElementById('monthGrid').innerHTML = cal + wSummary;
+  // Auto-Scroll zur Heute-Zelle
+  requestAnimationFrame(() => {
+    const todayCell = document.querySelector('.today-cell');
+    if (todayCell) todayCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 }
 
 function buildCalCell(date, entries, dayMins, otherMonth, isToday) {
@@ -3230,6 +3266,7 @@ let currentUser = null;  // { id, code, name, role }
 let syncBusy = false;
 let syncPushTimer = null;
 let _realtimeChannel = null;
+let _realtimePauseUntil = 0; // Timestamp-basiert statt Boolean (verhindert Race-Conditions)
 
 function getSupabase() {
   if (!_supabaseClient) {
@@ -3249,7 +3286,8 @@ function getSupabase() {
     if (profile && !error) {
       currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role };
       updateAdminUI(); updateSyncTab(); renderSyncPage();
-      syncPull().then(() => { renderEntries(); renderSaldo(); populateAllSelects(); });
+      // Push zuerst, damit lokale Einträge nicht verloren gehen, dann Pull
+      syncPush().then(() => syncPull()).then(() => { renderEntries(); renderSaldo(); populateAllSelects(); });
       setupRealtimeSync();
     } else {
       localStorage.removeItem('blitz_user_code'); localStorage.removeItem('blitz_user_id');
@@ -3386,7 +3424,7 @@ async function syncPush() {
   const sb = getSupabase();
   if (!sb) return;
   syncBusy = true;
-  _realtimePaused = true; // Eigene Push-Events nicht als externe Änderung interpretieren
+  _realtimePauseUntil = Date.now() + 10000; // Realtime für 10s pausieren (wird nach Pull erneuert)
   setSyncStatus('busy', 'Lade hoch…');
   try {
     // Vor dem Push lokale Duplikate bereinigen
@@ -3401,6 +3439,9 @@ async function syncPush() {
     }
     for (const c of data.customers) { if (!isUUID(String(c.id))) { c.id = ensureUUID(c.id); migrated = true; } }
     for (const l of data.locations) { if (!isUUID(String(l.id))) { l.id = ensureUUID(l.id); migrated = true; } }
+    // Non-UUID Tombstones entfernen (können nicht auf dem Server existieren)
+    // Hinweis: Alte Timestamp-IDs wurden bei Migration durch neue UUIDs ersetzt,
+    // daher sind non-UUID Tombstones ohnehin verwaist und können sicher entfernt werden.
     data.deletedIds = (data.deletedIds || []).filter(id => isUUID(String(id)));
     if (migrated) localStorage.setItem('blitz_v2', JSON.stringify(data));
     const allEntries = [
@@ -3451,8 +3492,8 @@ async function syncPush() {
     setSyncStatus('error', 'Upload fehlgeschlagen: ' + e.message);
   }
   syncBusy = false;
-  // Realtime nach Push für 3s unterdrücken (postgres_changes brauchen ~1s)
-  setTimeout(() => { _realtimePaused = false; }, 3000);
+  // Realtime bleibt pausiert bis syncPull in syncNow() fertig ist (oder 10s Failsafe)
+  _realtimePauseUntil = Math.max(_realtimePauseUntil, Date.now() + 3000);
 }
 
 function deduplicateLocalEntries() {
@@ -3492,20 +3533,20 @@ async function syncPull() {
   setSyncStatus('busy', 'Lade Daten…');
   try {
     const uid = currentUser.id;
-    const [{ data: allEntriesRaw, error: eErr }, { data: custsRaw, error: cErr }, { data: locsRaw, error: lErr }] = await Promise.all([
+    const results = await Promise.all([
       sb.rpc('get_entries_for_code', { p_code: currentUser.code }),
       sb.rpc('get_customers_for_code', { p_code: currentUser.code }),
       sb.rpc('get_locations_for_code', { p_code: currentUser.code })
     ]);
-    if (eErr) throw eErr;
-    if (cErr) throw cErr;
-    if (lErr) throw lErr;
+    // ALLE RPC-Fehler prüfen (nicht nur den ersten)
+    const errors = results.map((r, i) => r.error).filter(Boolean);
+    if (errors.length > 0) throw errors[0];
+    const [{ data: allEntriesRaw }, { data: custsRaw }, { data: locsRaw }] = results;
+
     // Lokale Tombstones merken, bevor wir data.deletedIds überschreiben
-    const localDeletedIds = data.deletedIds || [];
+    const localDeletedIds = [...(data.deletedIds || [])];
     const allRaw = allEntriesRaw || [];
     // STRIKTER user_id-Filter: Nur eigene Einträge akzeptieren.
-    // Wenn user_id im Response fehlt, vertrauen wir dem RPC (er sollte nur eigene liefern).
-    // Wenn user_id vorhanden ist und NICHT übereinstimmt → Eintrag abweisen.
     const entriesRaw = allRaw.filter(e => !e.deleted && (e.user_id === uid || e.user_id === undefined));
     const deletedRaw = allRaw.filter(e => e.deleted && (e.user_id === uid || e.user_id === undefined));
     // Dedup by ID (server-seitige ID-Duplikate verhindern)
@@ -3523,19 +3564,62 @@ async function syncPull() {
         seenContent.set(key, e.id);
         dedupedEntries.push(e);
       } else {
-        // Duplikat → als Tombstone merken damit es beim nächsten Push gelöscht wird
         localDeletedIds.push(e.id);
       }
     }
-    data.entries = dedupedEntries.map(e => ({
+    const serverEntries = dedupedEntries.map(e => ({
       id: e.id, date: e.date, from: e.from_time, to: e.to_time,
       breakMin: e.break_min, customerId: e.customer_id, customerName: e.customer_name,
       locationId: e.location_id, locationName: e.location_name,
       task: e.task, title: e.title, note: e.note, transferred: e.transferred
     }));
-    data.customers = (custsRaw || []).map(c => ({ id: c.id, name: c.name }));
-    data.locations = (locsRaw || []).map(l => ({ id: l.id, customerId: l.customer_id, name: l.name }));
-    // deletedIds MERGEN statt überschreiben (lokale Tombstones dürfen nicht verloren gehen)
+
+    // ── CRITICAL FIX: Lokale noch-nicht-gepushte Einträge bewahren ──
+    // Einträge die lokal existieren aber NICHT auf dem Server sind,
+    // wurden gerade erst hinzugefügt und noch nicht hochgeladen.
+    // Diese dürfen beim Pull nicht verloren gehen!
+    const serverEntryIds = new Set(allRaw.map(e => e.id));
+    const serverDeletedIds = new Set(deletedRaw.map(e => e.id));
+    const pendingLocalEntries = data.entries.filter(e =>
+      !serverEntryIds.has(e.id) &&         // nicht auf Server
+      !serverDeletedIds.has(e.id) &&       // nicht auf Server gelöscht
+      !localDeletedIds.includes(e.id)      // nicht lokal gelöscht
+    );
+
+    data.entries = [...serverEntries, ...pendingLocalEntries];
+    data.entries.sort((a, b) => (b.date + b.from).localeCompare(a.date + a.from));
+
+    // ── Kunden & Standorte mergen (Schutz vor Race-Condition) ──
+    // Wenn Server-Locations NULL customer_id haben (wegen FK-CASCADE zwischen
+    // sync_customers DELETE und sync_locations INSERT), lokale Zuordnung bewahren.
+    const serverCustomers = (custsRaw || []).map(c => ({ id: c.id, name: c.name }));
+    const serverLocations = (locsRaw || []).map(l => ({ id: l.id, customerId: l.customer_id, name: l.name }));
+
+    // Lokale customer_id-Mappings als Fallback merken
+    const localLocCustMap = new Map();
+    for (const l of data.locations) {
+      if (l.customerId) localLocCustMap.set(l.id, l.customerId);
+    }
+    // Pendiente lokale Locations bewahren (noch nicht gepusht)
+    const serverLocIds = new Set(serverLocations.map(l => l.id));
+    const pendingLocalLocs = data.locations.filter(l => !serverLocIds.has(l.id));
+
+    data.customers = serverCustomers;
+    data.locations = [...serverLocations, ...pendingLocalLocs];
+
+    // Fix: Wenn Server-Location NULL customer_id hat aber lokal war sie zugewiesen,
+    // und der Kunde noch existiert → lokale Zuordnung wiederherstellen
+    const customerIds = new Set(data.customers.map(c => c.id));
+    for (const l of data.locations) {
+      if (!l.customerId && localLocCustMap.has(l.id)) {
+        const localCustId = localLocCustMap.get(l.id);
+        if (customerIds.has(localCustId)) {
+          l.customerId = localCustId;
+        }
+      }
+    }
+
+    // deletedIds MERGEN statt überschreiben
     data.deletedIds = [...new Set([...localDeletedIds, ...(deletedRaw || []).map(e => e.id)])];
     localStorage.setItem('blitz_v2', JSON.stringify(data));
     renderEntries();
@@ -3552,16 +3636,13 @@ async function syncPull() {
   syncBusy = false;
 }
 
-let _realtimePaused = false; // Realtime-Events nach eigenem Push unterdrücken
-
 async function syncNow() {
-  clearTimeout(syncPushTimer); // Debounced Push abbrechen, da wir jetzt sofort pushen
-  // Realtime-Events während Push+Pull unterdrücken (eigener Push triggert postgres_changes)
-  _realtimePaused = true;
+  clearTimeout(syncPushTimer);
+  _realtimePauseUntil = Date.now() + 15000; // Realtime für 15s pausieren (Push+Pull+Buffer)
   await syncPush();
   await syncPull();
-  // Nach kurzem Delay Realtime wieder aktivieren (postgres_changes brauchen ~1s)
-  setTimeout(() => { _realtimePaused = false; }, 3000);
+  // Nach Pull: Realtime noch 3s pausiert lassen (postgres_changes Latenz)
+  _realtimePauseUntil = Date.now() + 3000;
 }
 
 function setupRealtimeSync() {
@@ -3571,9 +3652,15 @@ function setupRealtimeSync() {
   _realtimeChannel = sb.channel('blitz-entries')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'entries', filter: `user_id=eq.${currentUser.id}` }, () => {
       // Eigene Push-Events ignorieren (verhindert Sync-Loop)
-      if (!syncBusy && !_realtimePaused) syncPull();
+      if (!syncBusy && Date.now() > _realtimePauseUntil) syncPull();
     })
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('Realtime-Channel Fehler:', status, err);
+        // Retry nach 5s
+        setTimeout(() => setupRealtimeSync(), 5000);
+      }
+    });
 }
 
 function updateAdminUI() {
@@ -4161,23 +4248,24 @@ function hideTimerBanner() {
 }
 
 let _lastSyncTs = 0;
+// Zentrale Funktion: Push-then-Pull wenn Tab/App wieder aktiv wird
+// Push zuerst, damit lokale Einträge nicht beim Pull verloren gehen
+async function syncOnResume() {
+  if (!currentUser || syncBusy || Date.now() - _lastSyncTs < 60000) return;
+  _lastSyncTs = Date.now();
+  // Erst pushen (damit pending-Einträge auf den Server kommen), dann pullen
+  await syncPush();
+  await syncPull();
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     if (timerStart) { showTimerBanner(); setTimeout(hideTimerBanner, 5000); }
-    // Pull-only wenn Tab wieder aktiv wird (mind. 60s seit letztem Sync)
-    if (currentUser && !syncBusy && Date.now() - _lastSyncTs > 60000) {
-      _lastSyncTs = Date.now();
-      syncPull().then(() => { renderEntries(); renderSaldo(); populateAllSelects(); });
-    }
+    syncOnResume();
   }
 });
 
-window.addEventListener('focus', () => {
-  if (currentUser && !syncBusy && Date.now() - _lastSyncTs > 60000) {
-    _lastSyncTs = Date.now();
-    syncPull().then(() => { renderEntries(); renderSaldo(); populateAllSelects(); });
-  }
-});
+window.addEventListener('focus', () => { syncOnResume(); });
 
 
 
@@ -4218,6 +4306,26 @@ function showNetworkToast(msg) {
 
 window.addEventListener('online',  () => { updateOnlineStatus(); showNetworkToast('✅ Wieder online'); });
 window.addEventListener('offline', () => { updateOnlineStatus(); showNetworkToast('⚠️ Offline – Daten werden lokal gespeichert'); });
+
+// ============================================================
+//  SCROLL-TO-TODAY BUTTON (Einträge-Seite)
+// ============================================================
+function scrollToToday() {
+  const firstGroup = document.querySelector('#entriesList .day-group');
+  if (firstGroup) firstGroup.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scrollTopBtn');
+  if (!btn) return;
+  const isEntriesPage = document.getElementById('page-eintraege')?.classList.contains('active');
+  if (isEntriesPage && window.scrollY > 300) {
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
+  }
+});
 
 // ============================================================
 //  SERVICE WORKER REGISTRIERUNG
@@ -4262,6 +4370,8 @@ function editEntry(id) {
   document.getElementById('editTask').value = e.task || '';
 
   document.getElementById('editModalOverlay').classList.remove('hidden');
+  // Dauer-Vorschau sofort aktualisieren
+  updateDurPreview('editFrom','editTo','editBreak','editDurPreview');
 }
 
 function populateEditLocations(customerId, selectedId) {
@@ -4333,13 +4443,10 @@ function deleteEntry(id) {
     save();
     renderEntries();
     renderSaldo();
-    if (getAutoSyncEnabled()) {
-      clearTimeout(syncPushTimer);
-      syncPush(); // only push – no pull (pull would restore the deleted entry)
-    } else {
-      clearTimeout(syncPushTimer); // cancel debounce, push tombstone immediately
-      syncPush();
-    }
+    // Tombstone sofort pushen (ohne Pull, damit gelöschter Eintrag nicht zurückkommt)
+    clearTimeout(syncPushTimer);
+    _realtimePauseUntil = Date.now() + 5000; // Realtime-Pull unterdrücken
+    syncPush();
   } else {
     // Erster Klick → Bestätigung anzeigen
     btn.classList.add('confirm');
@@ -4549,15 +4656,18 @@ function confirmSplit() {
       </div>
       <div class="field">
         <label>Von</label>
-        <input type="time" id="editFrom">
+        <input type="time" id="editFrom" oninput="updateDurPreview('editFrom','editTo','editBreak','editDurPreview')">
       </div>
       <div class="field">
         <label>Bis</label>
-        <input type="time" id="editTo">
+        <input type="time" id="editTo" oninput="updateDurPreview('editFrom','editTo','editBreak','editDurPreview')">
       </div>
       <div class="field">
         <label>Pause (min)</label>
-        <input type="number" id="editBreak" min="0" step="5">
+        <input type="number" id="editBreak" min="0" step="5" oninput="updateDurPreview('editFrom','editTo','editBreak','editDurPreview')">
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <div class="quick-duration" id="editDurPreview" style="margin:0;text-align:left"></div>
       </div>
       <div class="field">
         <label>Tätigkeit</label>
@@ -4566,6 +4676,8 @@ function confirmSplit() {
           <option value="Installation">Installation</option>
           <option value="Wartung">Wartung</option>
           <option value="Störung">Störung</option>
+          <option value="Inbetriebnahme">Inbetriebnahme</option>
+          <option value="Planung">Planung</option>
           <option value="Sonstiges">Sonstiges</option>
         </select>
       </div>
