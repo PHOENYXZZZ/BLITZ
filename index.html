@@ -1023,7 +1023,7 @@
     .sync-steps { gap: 1rem; }
 
     /* Wochensoll input on mobile */
-    #wochensollInput { width: 50px !important; font-size: 1.2rem !important; }
+    /* wochensollInput is now a span, no special sizing needed */
 
     /* iOS: font-size < 16px triggert automatischen Zoom → auf 1rem setzen */
     input[type="text"], input[type="time"], input[type="date"],
@@ -1599,9 +1599,7 @@
       <div class="saldo-item">
         <div class="saldo-label">Wochensoll</div>
         <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.15rem">
-          <input type="number" id="wochensollInput" min="1" max="60" step="0.5"
-            style="width:60px;font-family:'Fraunces',serif;font-size:1.4rem;font-weight:300;color:var(--accent);background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:0 0.1rem;outline:none;text-align:right"
-            oninput="updateWochensoll(this.value)">
+          <span id="wochensollInput" style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:300;color:var(--accent)"></span>
           <span style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:300;color:var(--accent)">h</span>
         </div>
         <div style="font-size:0.65rem;color:var(--muted);margin-top:0.2rem" id="saldoSollSub"></div>
@@ -1897,6 +1895,10 @@
           <option value="worker">Mitarbeiter</option>
           <option value="admin">Admin</option>
         </select>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <input type="number" id="newUserHours" min="1" max="60" step="0.5" value="39" style="width:70px" placeholder="39">
+          <span style="font-size:0.85rem;color:var(--muted)">Wochenstunden (Soll)</span>
+        </div>
         <button class="btn-primary" onclick="addUser()">➕ Benutzer anlegen</button>
       </div>
       <div id="addUserError" style="color:var(--red);font-size:0.72rem;margin-top:0.5rem;display:none"></div>
@@ -2535,17 +2537,10 @@ function renderSaldo() {
   if (mv) { mv.textContent = fmtSaldo(monthDiff); mv.className = `saldo-val ${saldoClass(monthDiff)}`; }
   if (ms) ms.textContent = `${fmtDur(monthMins)} von ${fmtDur(Math.round(monthSollMins))}`;
   if (ss) ss.textContent = `Mo–Fr · ${(WOCHENSOLL_MIN/5/60).toFixed(2).replace('.','.')}h/Tag`;
-  if (inp && document.activeElement !== inp) inp.value = (WOCHENSOLL_MIN/60).toFixed(1);
+  if (inp) inp.textContent = (WOCHENSOLL_MIN/60).toFixed(1);
 }
 
-function updateWochensoll(val) {
-  const h = parseFloat(val);
-  if (isNaN(h) || h <= 0) return;
-  WOCHENSOLL_MIN = h * 60;
-  localStorage.setItem('blitz_wochensoll', h);
-  renderSaldo();
-  // Update daily hint in panel without full re-render losing focus
-}
+// updateWochensoll removed – weekly hours are now per-user, set via admin panel
 
 // ============================================================
 //  ÜBERSICHT (Woche / Monat / Jahr)
@@ -3288,7 +3283,9 @@ function getSupabase() {
   if (!savedCode || !savedId) { renderSyncPage(); return; }
   sb.rpc('login_with_code', { p_code: savedCode }).then(({ data: profile, error }) => {
     if (profile && !error) {
-      currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role };
+      currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role, weekly_hours: profile.weekly_hours || 39 };
+      WOCHENSOLL_MIN = (currentUser.weekly_hours) * 60;
+      localStorage.setItem('blitz_wochensoll', currentUser.weekly_hours);
       updateAdminUI(); updateSyncTab(); renderSyncPage();
       // Push zuerst, damit lokale Einträge nicht verloren gehen, dann Pull
       syncPush().then(() => syncPull()).then(() => { renderEntries(); renderSaldo(); populateAllSelects(); });
@@ -3371,9 +3368,11 @@ async function loginWithCode() {
     const { data: profile, error } = await sb.rpc('login_with_code', { p_code: code });
     if (error || !profile) throw new Error('Unbekannter Code – bitte Administrator kontaktieren');
     const previousUserId = localStorage.getItem('blitz_user_id');
-    currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role };
+    currentUser = { id: profile.id, code: profile.code, name: profile.name, role: profile.role, weekly_hours: profile.weekly_hours || 39 };
+    WOCHENSOLL_MIN = (currentUser.weekly_hours) * 60;
     localStorage.setItem('blitz_user_code', code);
     localStorage.setItem('blitz_user_id', profile.id);
+    localStorage.setItem('blitz_wochensoll', currentUser.weekly_hours);
     if (previousUserId === profile.id && (data.entries.length > 0 || data.customers.length > 0)) {
       // Gleicher User → Offline-Einträge hochladen
       await syncPush();
@@ -3687,11 +3686,19 @@ async function renderBenutzerPage() {
   if (error) { container.innerHTML = `<div style="color:var(--red)">${escapeHtml(error.message)}</div>`; return; }
   container.innerHTML = (users || []).map(u => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--border)">
-      <div>
+      <div style="flex:1">
         <div style="font-weight:500">${escapeHtml(u.name)}</div>
         <div style="font-size:0.72rem;color:var(--muted)">Code: <code>${escapeHtml(u.code)}</code> · ${u.role === 'admin' ? 'Admin' : 'Mitarbeiter'}</div>
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem">
+          <input type="number" min="1" max="60" step="0.5" value="${u.weekly_hours || 39}"
+            style="width:50px;font-size:0.8rem;padding:0.15rem 0.3rem;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--fg)"
+            onchange="updateUserHours('${escapeHtml(u.id)}', this.value, this)">
+          <span style="font-size:0.72rem;color:var(--muted)">h/Woche</span>
+        </div>
       </div>
-      ${u.id !== currentUser.id ? `<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.72rem" onclick="deleteUser('${escapeHtml(u.id)}',this)">✕</button>` : '<span style="font-size:0.72rem;color:var(--muted)">Du</span>'}
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        ${u.id !== currentUser.id ? `<button class="btn-danger" style="padding:0.3rem 0.6rem;font-size:0.72rem" onclick="deleteUser('${escapeHtml(u.id)}',this)">✕</button>` : '<span style="font-size:0.72rem;color:var(--muted)">Du</span>'}
+      </div>
     </div>`).join('');
 }
 
@@ -3699,13 +3706,14 @@ async function addUser() {
   const code = (document.getElementById('newUserCode').value || '').trim().toLowerCase();
   const name = (document.getElementById('newUserName').value || '').trim();
   const role = document.getElementById('newUserRole').value;
+  const hours = parseFloat(document.getElementById('newUserHours').value) || 39;
   const err = document.getElementById('addUserError');
   const ok  = document.getElementById('addUserSuccess');
   err.style.display = 'none'; ok.style.display = 'none';
   if (!code || !name) { err.textContent = 'Bitte Code und Name eingeben.'; err.style.display = ''; return; }
   const sb = getSupabase();
   const { data: result, error } = await sb.rpc('admin_create_user', {
-    p_admin_code: currentUser.code, p_code: code, p_name: name, p_role: role
+    p_admin_code: currentUser.code, p_code: code, p_name: name, p_role: role, p_weekly_hours: hours
   });
   if (error) {
     err.textContent = error.message.includes('unique') || error.message.includes('duplicate')
@@ -3727,6 +3735,26 @@ async function deleteUser(id, btn) {
   const { error } = await sb.rpc('admin_delete_user', { p_admin_code: currentUser.code, p_user_id: id });
   if (error) { alert('Fehler: ' + error.message); return; }
   renderBenutzerPage();
+}
+
+async function updateUserHours(userId, val, inputEl) {
+  const h = parseFloat(val);
+  if (isNaN(h) || h < 1 || h > 60) { inputEl.style.borderColor = 'var(--red)'; return; }
+  inputEl.style.borderColor = 'var(--border)';
+  const sb = getSupabase();
+  const { error } = await sb.rpc('admin_update_user_hours', {
+    p_admin_code: currentUser.code, p_user_id: userId, p_weekly_hours: h
+  });
+  if (error) { alert('Fehler: ' + error.message); return; }
+  inputEl.style.borderColor = 'var(--green)';
+  setTimeout(() => { inputEl.style.borderColor = 'var(--border)'; }, 1500);
+  // Update own value if editing self
+  if (userId === currentUser.id) {
+    currentUser.weekly_hours = h;
+    WOCHENSOLL_MIN = h * 60;
+    localStorage.setItem('blitz_wochensoll', h);
+    renderSaldo();
+  }
 }
 
 async function renderTeamPage() {
@@ -3765,8 +3793,8 @@ async function renderTeamPage() {
   const byUser = {};
   for (const e of (allEntries || [])) {
     const name = e.user_name || 'Unbekannt';
-    if (!byUser[name]) byUser[name] = [];
-    byUser[name].push(e);
+    if (!byUser[name]) byUser[name] = { entries: [], weekly_hours: e.weekly_hours || 39 };
+    byUser[name].entries.push(e);
   }
 
   if (Object.keys(byUser).length === 0) {
@@ -3774,8 +3802,14 @@ async function renderTeamPage() {
     return;
   }
 
+  // Calculate month soll (weekdays in selected month up to today)
+  const [mY, mM] = month.split('-').map(Number);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const monthStart = new Date(mY, mM - 1, 1);
+  const monthEnd = new Date(mY, mM, 0); // last day of month
+
   let html = '';
-  for (const [name, entries] of Object.entries(byUser).sort()) {
+  for (const [name, { entries, weekly_hours }] of Object.entries(byUser).sort()) {
     const totalMin = entries.reduce((sum, e) => {
       const dur = calcDuration(e.from_time || '', e.to_time || '', e.break_min || 0);
       return sum + dur.total;
@@ -3783,14 +3817,35 @@ async function renderTeamPage() {
     const h = Math.floor(totalMin / 60);
     const m = totalMin % 60;
     const pending = entries.filter(e => !e.transferred).length;
+    // Calculate month soll for this user
+    const userDayMin = (weekly_hours * 60) / 5;
+    let monthSollMin = 0;
+    const endDate = monthEnd < today ? monthEnd : today;
+    const cur = new Date(monthStart);
+    while (cur <= endDate) {
+      const d = cur.getDay();
+      if (d !== 0 && d !== 6) monthSollMin += userDayMin;
+      cur.setDate(cur.getDate() + 1);
+    }
+    const diffMin = totalMin - monthSollMin;
+    const diffSign = diffMin >= 0 ? '+' : '−';
+    const diffAbs = Math.abs(Math.round(diffMin));
+    const diffCol = diffMin >= 0 ? 'var(--green)' : 'var(--red)';
     html += `<div class="panel" style="margin-bottom:0.75rem">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="font-weight:500;font-size:0.95rem">${escapeHtml(name)}</div>
         <div style="color:var(--accent);font-family:'DM Mono',monospace;font-size:1.1rem">${h}h ${String(m).padStart(2,'0')}m</div>
       </div>
-      <div style="color:var(--muted);font-size:0.72rem;margin-top:0.3rem">
-        ${entries.length} Einträge · ${pending > 0 ? `<span style="color:var(--accent2)">${pending} nicht übertragen</span>` : '<span style="color:var(--green)">alle übertragen</span>'}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.3rem">
+        <div style="color:var(--muted);font-size:0.72rem">
+          ${entries.length} Einträge · ${pending > 0 ? `<span style="color:var(--accent2)">${pending} nicht übertragen</span>` : '<span style="color:var(--green)">alle übertragen</span>'}
+        </div>
+        <div style="font-size:0.75rem">
+          <span style="color:var(--muted)">Soll: ${fmtDur(Math.round(monthSollMin))}</span>
+          <span style="color:${diffCol};margin-left:0.5rem;font-weight:500">${diffSign}${Math.floor(diffAbs/60)}h${String(diffAbs%60).padStart(2,'0')}m</span>
+        </div>
       </div>
+      <div style="color:var(--muted);font-size:0.65rem;margin-top:0.15rem">${weekly_hours}h/Woche</div>
     </div>`;
   }
   container.innerHTML = html;
@@ -3988,7 +4043,7 @@ document.addEventListener('keydown', e => {
 //  INIT
 // ============================================================
 document.getElementById('manDate').value = isoDate(new Date());
-document.getElementById('wochensollInput').value = (WOCHENSOLL_MIN/60).toFixed(1);
+document.getElementById('wochensollInput').textContent = (WOCHENSOLL_MIN/60).toFixed(1);
 populateAllSelects();
 renderEntries();
 renderSaldo();
