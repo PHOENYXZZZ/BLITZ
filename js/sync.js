@@ -170,10 +170,8 @@ async function syncPush(_fromSyncNow = false) {
   if (!sb) { if (!_fromSyncNow) syncBusy = false; return; }
   setSyncStatus('busy', 'Lade hoch…');
   try {
-    // Vor dem Push lokale Duplikate bereinigen
-    deduplicateLocalEntries();
     const uid = currentUser.id;
-    // Sicherheitsnetz: Non-UUID-IDs migrieren (z.B. alte Timestamp-IDs vom Server)
+    // 1. UUID-Migration ZUERST (vor Dedup, damit IDs stabil sind)
     let needsSave = false;
     for (const e of data.entries) {
       if (!isUUID(String(e.id))) { e.id = crypto.randomUUID(); needsSave = true; }
@@ -187,9 +185,10 @@ async function syncPush(_fromSyncNow = false) {
       if (!isUUID(String(l.id))) { l.id = crypto.randomUUID(); needsSave = true; }
       if (l.customerId && !isUUID(String(l.customerId))) { l.customerId = null; needsSave = true; }
     }
-    // Non-UUID Tombstones filtern
     data.deletedIds = (data.deletedIds || []).filter(id => isUUID(String(id)));
     if (needsSave) localStorage.setItem('blitz_v2', JSON.stringify(data));
+    // 2. Dann Duplikate bereinigen (silent — kein Toast beim automatischen Push)
+    deduplicateLocalEntries(true);
     // Helper: Nur gültige UUIDs durchlassen, alles andere → null
     // (verhindert "operator does not exist: text = uuid" Fehler)
     const uuidOrNull = v => (v && isUUID(String(v))) ? String(v) : null;
@@ -268,7 +267,7 @@ function scheduleSyncRetry() {
   }, delay);
 }
 
-function deduplicateLocalEntries() {
+function deduplicateLocalEntries(silent = false) {
   if (!data.entries || data.entries.length === 0) return false;
   const seen = new Map();
   const toDelete = [];
@@ -278,7 +277,6 @@ function deduplicateLocalEntries() {
     return cmp !== 0 ? cmp : String(a.id).localeCompare(String(b.id));
   });
   for (const e of sorted) {
-    // Dedup-Key: Datum + Zeiten + Kunde + Aufgabe + Titel (verhindert Löschung legitimer Einträge)
     const key = `${e.date}|${e.from}|${e.to}|${String(e.customerName||e.customerId||'')}|${e.task||''}|${e.title||''}`;
     if (seen.has(key)) {
       toDelete.push(e.id);
@@ -288,10 +286,13 @@ function deduplicateLocalEntries() {
   }
   if (toDelete.length > 0) {
     data.entries = data.entries.filter(e => !toDelete.includes(e.id));
-    data.deletedIds = [...new Set([...(data.deletedIds || []), ...toDelete])];
-    // Direktes Speichern ohne save(), um Sync-Trigger-Loop zu vermeiden
+    // Nur gültige UUIDs als Tombstones speichern
+    const validDeletes = toDelete.filter(id => isUUID(String(id)));
+    data.deletedIds = [...new Set([...(data.deletedIds || []), ...validDeletes])];
     localStorage.setItem('blitz_v2', JSON.stringify(data));
-    showToast(`${toDelete.length} Duplikat${toDelete.length === 1 ? '' : 'e'} bereinigt`);
+    if (!silent) {
+      showToast(`${toDelete.length} Duplikat${toDelete.length === 1 ? '' : 'e'} bereinigt`);
+    }
     return true;
   }
   return false;
@@ -313,36 +314,23 @@ async function syncPull(_fromSyncNow = false) {
       sb.rpc('get_customers_for_code', { p_code: currentUser.code }),
       sb.rpc('get_locations_for_code', { p_code: currentUser.code })
     ]);
-    // ALLE RPC-Fehler prüfen (nicht nur den ersten)
-    const errors = results.map((r, i) => r.error).filter(Boolean);
+    const errors = results.map(r => r.error).filter(Boolean);
     if (errors.length > 0) throw errors[0];
     const [{ data: allEntriesRaw }, { data: custsRaw }, { data: locsRaw }] = results;
 
-    // Lokale Tombstones merken, bevor wir data.deletedIds überschreiben
     const localDeletedIds = [...(data.deletedIds || [])];
     const allRaw = allEntriesRaw || [];
-    // STRIKTER user_id-Filter: Nur eigene Einträge akzeptieren.
     const entriesRaw = allRaw.filter(e => !e.deleted && (e.user_id === uid || e.user_id === undefined));
     const deletedRaw = allRaw.filter(e => e.deleted && (e.user_id === uid || e.user_id === undefined));
-    // Dedup by ID (server-seitige ID-Duplikate verhindern)
+
+    // Server-Einträge deduplizieren (nach ID, dann nach Inhalt)
     const seenIds = new Set();
     const uniqueEntries = entriesRaw.filter(e => {
       if (seenIds.has(e.id)) return false;
       seenIds.add(e.id); return true;
     });
-    // Content-basierte Dedup direkt beim Import (gleicher Tag + gleiche Zeiten + gleicher Kunde = Duplikat)
-    const seenContent = new Map();
-    const dedupedEntries = [];
-    for (const e of uniqueEntries) {
-      const key = `${e.date}|${e.from_time}|${e.to_time}|${e.customer_name||''}|${e.task||''}|${e.title||''}`;
-      if (!seenContent.has(key)) {
-        seenContent.set(key, e.id);
-        dedupedEntries.push(e);
-      } else {
-        localDeletedIds.push(e.id);
-      }
-    }
-    const serverEntries = dedupedEntries.map(e => ({
+
+    const serverEntries = uniqueEntries.map(e => ({
       id: e.id, date: e.date, from: e.from_time, to: e.to_time,
       breakMin: e.break_min, customerId: e.customer_id, customerName: e.customer_name,
       locationId: e.location_id, locationName: e.location_name,
@@ -350,17 +338,27 @@ async function syncPull(_fromSyncNow = false) {
       travelMin: e.travel_min || 0, travelKm: e.travel_km || 0
     }));
 
-    // ── CRITICAL FIX: Lokale noch-nicht-gepushte Einträge bewahren ──
-    // Einträge die lokal existieren aber NICHT auf dem Server sind,
-    // wurden gerade erst hinzugefügt und noch nicht hochgeladen.
-    // Diese dürfen beim Pull nicht verloren gehen!
+    // ── Lokale pending Einträge bewahren ──
+    // Nur Einträge die per ID UND per Inhalt nicht auf dem Server sind.
+    // Das verhindert den Duplikat-Loop: Ein lokal erstellter Eintrag der nach
+    // dem ersten Push auf dem Server existiert (mit gleicher ID) wird nicht
+    // nochmal als "pending" beibehalten.
     const serverEntryIds = new Set(allRaw.map(e => e.id));
     const serverDeletedIds = new Set(deletedRaw.map(e => e.id));
-    const pendingLocalEntries = data.entries.filter(e =>
-      !serverEntryIds.has(e.id) &&         // nicht auf Server
-      !serverDeletedIds.has(e.id) &&       // nicht auf Server gelöscht
-      !localDeletedIds.includes(e.id)      // nicht lokal gelöscht
-    );
+    // Content-Keys der Server-Einträge für Abgleich
+    const serverContentKeys = new Set(serverEntries.map(e =>
+      `${e.date}|${e.from}|${e.to}|${e.customerName||''}|${e.task||''}|${e.title||''}`
+    ));
+
+    const pendingLocalEntries = data.entries.filter(e => {
+      if (serverEntryIds.has(e.id)) return false;       // ID existiert auf Server
+      if (serverDeletedIds.has(e.id)) return false;     // auf Server gelöscht
+      if (localDeletedIds.includes(e.id)) return false; // lokal gelöscht
+      // Inhaltlich identischen Server-Eintrag? → kein Pending (verhindert Duplikat-Loop)
+      const contentKey = `${e.date}|${e.from}|${e.to}|${e.customerName||''}|${e.task||''}|${e.title||''}`;
+      if (serverContentKeys.has(contentKey)) return false;
+      return true;
+    });
 
     // ── Konflikt-Erkennung ──
     const conflicts = [];
@@ -370,7 +368,6 @@ async function syncPull(_fromSyncNow = false) {
         if (!localEntry._modifiedAt || localEntry._modifiedAt <= _lastSyncAt) continue;
         const serverVersion = serverEntryMap.get(localEntry.id);
         if (!serverVersion) continue;
-        // Vergleiche Content-Hash
         const localHash = entryContentHash(localEntry);
         const serverHash = entryContentHash(serverVersion);
         if (localHash !== serverHash) {
@@ -386,42 +383,36 @@ async function syncPull(_fromSyncNow = false) {
     if (conflicts.length > 0) {
       for (const c of conflicts) {
         const idx = data.entries.findIndex(e => e.id === c.local.id);
-        if (idx !== -1) data.entries[idx] = c.local; // Lokale Version erstmal behalten
+        if (idx !== -1) data.entries[idx] = c.local;
       }
     }
 
-    // ── Kunden & Standorte mergen (Schutz vor Race-Condition) ──
-    // Wenn Server-Locations NULL customer_id haben (wegen FK-CASCADE zwischen
-    // sync_customers DELETE und sync_locations INSERT), lokale Zuordnung bewahren.
+    // ── Kunden & Standorte ──
     const serverCustomers = (custsRaw || []).map(c => ({ id: c.id, name: c.name }));
     const serverLocations = (locsRaw || []).map(l => ({ id: l.id, customerId: l.customer_id, name: l.name }));
 
-    // Lokale customer_id-Mappings als Fallback merken
     const localLocCustMap = new Map();
     for (const l of data.locations) {
       if (l.customerId) localLocCustMap.set(l.id, l.customerId);
     }
-    // Pendiente lokale Locations bewahren (noch nicht gepusht)
     const serverLocIds = new Set(serverLocations.map(l => l.id));
     const pendingLocalLocs = data.locations.filter(l => !serverLocIds.has(l.id));
 
     data.customers = serverCustomers;
     data.locations = [...serverLocations, ...pendingLocalLocs];
 
-    // Fix: Wenn Server-Location NULL customer_id hat aber lokal war sie zugewiesen,
-    // und der Kunde noch existiert → lokale Zuordnung wiederherstellen
+    // Fehlende customer_id-Zuordnungen wiederherstellen
     const customerIds = new Set(data.customers.map(c => c.id));
     for (const l of data.locations) {
       if (!l.customerId && localLocCustMap.has(l.id)) {
         const localCustId = localLocCustMap.get(l.id);
-        if (customerIds.has(localCustId)) {
-          l.customerId = localCustId;
-        }
+        if (customerIds.has(localCustId)) l.customerId = localCustId;
       }
     }
 
-    // deletedIds MERGEN statt überschreiben
-    data.deletedIds = [...new Set([...localDeletedIds, ...(deletedRaw || []).map(e => e.id)])];
+    // deletedIds mergen (lokale + Server-Tombstones), nur gültige UUIDs
+    data.deletedIds = [...new Set([...localDeletedIds, ...(deletedRaw || []).map(e => e.id)])]
+      .filter(id => isUUID(String(id)));
     localStorage.setItem('blitz_v2', JSON.stringify(data));
     renderEntries();
     renderSaldo();
@@ -434,7 +425,6 @@ async function syncPull(_fromSyncNow = false) {
     const el = document.getElementById('syncLastDown');
     if (el) el.textContent = ts;
 
-    // Konflikte anzeigen (nach Render, damit UI aktuell ist)
     if (conflicts.length > 0) {
       showConflictModal(conflicts);
     }
