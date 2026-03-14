@@ -169,12 +169,15 @@ async function logout() {
   updateAdminUI();
 }
 
-async function syncPush() {
-  if (!currentUser || syncBusy) return;
+async function syncPush(_fromSyncNow = false) {
+  if (!currentUser) return;
+  if (!_fromSyncNow) {
+    if (syncBusy) { _syncQueued = true; return; }
+    syncBusy = true;
+  }
+  _realtimePauseUntil = Date.now() + 10000;
   const sb = getSupabase();
-  if (!sb) return;
-  syncBusy = true;
-  _realtimePauseUntil = Date.now() + 10000; // Realtime für 10s pausieren (wird nach Pull erneuert)
+  if (!sb) { if (!_fromSyncNow) syncBusy = false; return; }
   setSyncStatus('busy', 'Lade hoch…');
   try {
     // Vor dem Push lokale Duplikate bereinigen
@@ -194,12 +197,15 @@ async function syncPush() {
     // daher sind non-UUID Tombstones ohnehin verwaist und können sicher entfernt werden.
     data.deletedIds = (data.deletedIds || []).filter(id => isUUID(String(id)));
     if (migrated) localStorage.setItem('blitz_v2', JSON.stringify(data));
+    // Helper: Nur gültige UUIDs durchlassen, alles andere → null
+    // (verhindert "operator does not exist: text = uuid" Fehler)
+    const uuidOrNull = v => (v && isUUID(String(v))) ? String(v) : null;
     const allEntries = [
       ...data.entries.map(e => ({
         id: String(e.id), date: e.date,
         from_time: e.from, to_time: e.to, break_min: e.breakMin || 0,
-        customer_id: e.customerId || null, customer_name: e.customerName || null,
-        location_id: e.locationId || null, location_name: e.locationName || null,
+        customer_id: uuidOrNull(e.customerId), customer_name: e.customerName || null,
+        location_id: uuidOrNull(e.locationId), location_name: e.locationName || null,
         task: e.task || null, title: e.title || null, note: e.note || null,
         transferred: e.transferred || false, deleted: false,
         travel_min: e.travelMin || 0, travel_km: e.travelKm || 0
@@ -222,7 +228,7 @@ async function syncPush() {
       const { error } = await sb.rpc('sync_masterdata_for_code', {
         p_code: currentUser.code,
         p_customers: data.customers.map(c => ({ id: String(c.id), name: c.name })),
-        p_locations: data.locations.map(l => ({ id: String(l.id), customer_id: l.customerId || null, name: l.name }))
+        p_locations: data.locations.map(l => ({ id: String(l.id), customer_id: uuidOrNull(l.customerId), name: l.name }))
       });
       if (error) throw error;
     }
@@ -242,13 +248,10 @@ async function syncPush() {
       setSyncStatus('error', 'Upload fehlgeschlagen: ' + e.message);
     }
   }
-  syncBusy = false;
-  // Realtime bleibt pausiert bis syncPull in syncNow() fertig ist (oder 10s Failsafe)
-  _realtimePauseUntil = Math.max(_realtimePauseUntil, Date.now() + 3000);
-  // Warteschlange abarbeiten (Realtime-Event kam während Push)
-  if (_syncQueued && !syncBusy) {
-    _syncQueued = false;
-    setTimeout(() => syncPull(), 500);
+  if (!_fromSyncNow) {
+    syncBusy = false;
+    _realtimePauseUntil = Math.max(_realtimePauseUntil, Date.now() + 3000);
+    if (_syncQueued) { _syncQueued = false; setTimeout(() => syncNow(), 500); }
   }
 }
 
@@ -295,12 +298,14 @@ function deduplicateLocalEntries() {
   return false;
 }
 
-async function syncPull() {
+async function syncPull(_fromSyncNow = false) {
   if (!currentUser) return;
-  if (syncBusy) return; // verhindert parallele Pulls (z.B. via Realtime-Trigger)
+  if (!_fromSyncNow) {
+    if (syncBusy) { _syncQueued = true; return; }
+    syncBusy = true;
+  }
   const sb = getSupabase();
-  if (!sb) return;
-  syncBusy = true;
+  if (!sb) { if (!_fromSyncNow) syncBusy = false; return; }
   setSyncStatus('busy', 'Lade Daten…');
   try {
     const uid = currentUser.id;
@@ -436,11 +441,9 @@ async function syncPull() {
   } catch(e) {
     setSyncStatus('error', 'Download fehlgeschlagen: ' + e.message);
   }
-  syncBusy = false;
-  // Warteschlange abarbeiten (Realtime-Event kam während Pull)
-  if (_syncQueued && !syncBusy) {
-    _syncQueued = false;
-    setTimeout(() => syncPull(), 500);
+  if (!_fromSyncNow) {
+    syncBusy = false;
+    if (_syncQueued) { _syncQueued = false; setTimeout(() => syncNow(), 500); }
   }
 }
 
@@ -502,14 +505,18 @@ async function syncNow() {
     _syncQueued = true; // Nicht verwerfen, sondern nachholen
     return;
   }
+  syncBusy = true; // Lock für gesamte Pull+Push Sequenz
   clearTimeout(syncPushTimer);
-  _realtimePauseUntil = Date.now() + 15000; // Realtime für 15s pausieren (Push+Pull+Buffer)
-  // WICHTIG: Pull ZUERST, damit wir den aktuellen Server-Stand haben
-  // bevor wir pushen. Verhindert dass Stammdaten (DELETE+INSERT)
-  // Änderungen vom anderen Gerät überschreiben.
-  await syncPull();
-  await syncPush();
-  // Nach Push: Realtime noch 3s pausiert lassen (postgres_changes Latenz)
+  _realtimePauseUntil = Date.now() + 15000;
+  try {
+    // Pull ZUERST: Server-Stand holen, damit Stammdaten (DELETE+INSERT)
+    // Änderungen vom anderen Gerät nicht überschrieben werden.
+    await syncPull(true);
+    await syncPush(true);
+  } catch (e) {
+    setSyncStatus('error', 'Sync fehlgeschlagen: ' + e.message);
+  }
+  syncBusy = false;
   _realtimePauseUntil = Date.now() + 3000;
   // Warteschlange abarbeiten (z.B. Realtime-Event während Sync)
   if (_syncQueued) {
@@ -526,6 +533,7 @@ function _onRealtimeChange() {
     _syncQueued = true;
     return;
   }
+  // Pull holt entries + customers + locations in einem Rutsch
   syncPull();
 }
 
@@ -533,19 +541,22 @@ function setupRealtimeSync() {
   const sb = getSupabase();
   if (!sb || !currentUser) return;
   if (_realtimeChannel) sb.removeChannel(_realtimeChannel);
-  _realtimeChannel = sb.channel('blitz-sync')
-    // Entries, Kunden UND Standorte überwachen
-    // (verhindert dass Stammdaten-Änderungen vom anderen Gerät verloren gehen)
+  // Entries-Channel (primär, bewährt)
+  _realtimeChannel = sb.channel('blitz-entries')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'entries', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'locations', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
     .subscribe((status, err) => {
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn('Realtime-Channel Fehler:', status, err);
-        // Retry nach 5s
         setTimeout(() => setupRealtimeSync(), 5000);
       }
     });
+  // Optionaler Stammdaten-Channel (kann fehlschlagen wenn Realtime nicht aktiviert)
+  try {
+    sb.channel('blitz-masterdata')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'locations', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
+      .subscribe(); // Fehler still ignorieren — Pull-vor-Push ist der Hauptschutz
+  } catch(e) { /* Stammdaten-Realtime nicht verfügbar – kein Problem */ }
 }
 
 function updateAdminUI() {

@@ -17,7 +17,7 @@ function exportCSV() {
   });
   rows.push(['','','','','','','','','','','Gesamt:','']);
   rows.push(['','','','','','','','','','',totalTravelMin + ' min', totalTravelKm.toFixed(1) + ' km']);
-  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""').replace(/[\r\n]+/g, ' ')}"`).join(';')).join('\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

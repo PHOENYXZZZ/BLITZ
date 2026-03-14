@@ -324,7 +324,7 @@
   /* TRANSFER BUTTON */
   .transfer-btn {
     background: none; border: 1.5px solid var(--icon); color: var(--icon);
-    border-radius: 50%; width: 28px; height: 28px; font-size: 0.8rem;
+    border-radius: 50%; width: 32px; height: 32px; font-size: 0.8rem;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     margin: 0.35rem auto 0; transition: all 0.2s; min-height: unset; padding: 0;
     -webkit-tap-highlight-color: transparent;
@@ -395,9 +395,11 @@
     color: var(--icon);
     cursor: pointer;
     font-size: 1.1rem;
-    padding: 0.2rem 0.3rem;
+    padding: 0.4rem 0.5rem;
     transition: all 0.15s;
-    min-height: unset;
+    min-height: 36px;
+    min-width: 36px;
+    display: flex; align-items: center; justify-content: center;
   }
   .entry-delete:hover { color: var(--red); border: none; }
   .entry-delete.confirm {
@@ -416,9 +418,11 @@
     color: var(--icon);
     cursor: pointer;
     font-size: 1rem;
-    padding: 0.2rem 0.3rem;
+    padding: 0.4rem 0.5rem;
     transition: color 0.15s;
-    min-height: unset;
+    min-height: 36px;
+    min-width: 36px;
+    display: flex; align-items: center; justify-content: center;
   }
   .entry-edit:hover { color: var(--accent); border: none; }
   .entry-right { text-align: right; }
@@ -1313,14 +1317,16 @@
 
   .entry-dup {
     background: none; border: none; color: var(--border);
-    cursor: pointer; font-size: 1rem; padding: 0.2rem 0.3rem;
-    transition: color 0.15s; min-height: unset;
+    cursor: pointer; font-size: 1rem; padding: 0.4rem 0.5rem;
+    transition: color 0.15s; min-height: 36px; min-width: 36px;
+    display: flex; align-items: center; justify-content: center;
   }
   .entry-dup:hover { color: var(--blue); border: none; }
   .entry-split {
     background: none; border: none; color: var(--border);
-    cursor: pointer; font-size: 1rem; padding: 0.2rem 0.3rem;
-    transition: color 0.15s; min-height: unset;
+    cursor: pointer; font-size: 1rem; padding: 0.4rem 0.5rem;
+    transition: color 0.15s; min-height: 36px; min-width: 36px;
+    display: flex; align-items: center; justify-content: center;
   }
   .entry-split:hover { color: var(--accent); border: none; }
 
