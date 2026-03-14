@@ -522,5 +522,5 @@ function updateAdminUI() {
   const benutzerItem = document.getElementById('mehrBenutzerItem');
   if (teamTab) teamTab.style.display = showTeam ? '' : 'none';
   if (bnavTeam) bnavTeam.style.display = showTeam ? '' : 'none';
-  if (benutzerItem) benutzerItem.style.display = isAdmin ? '' : 'none'; // Nur Admin
+  if (benutzerItem) benutzerItem.style.display = isAdmin ? 'flex' : 'none'; // Nur Admin
 }

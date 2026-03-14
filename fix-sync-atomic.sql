@@ -26,8 +26,8 @@ BEGIN
   SELECT id INTO v_user_id FROM profiles WHERE code = p_code;
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Unbekannter Code'; END IF;
 
-  -- FK-Constraints aufschieben bis COMMIT → kein CASCADE während DELETE/INSERT
-  SET CONSTRAINTS ALL DEFERRED;
+  -- Nur den Location-FK aufschieben → kein CASCADE während DELETE/INSERT
+  SET CONSTRAINTS locations_customer_id_fkey DEFERRED;
 
   -- Abhängige Tabelle zuerst löschen (Locations), dann Kunden
   DELETE FROM locations WHERE user_id = v_user_id;
