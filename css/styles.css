@@ -47,6 +47,7 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  .hidden { display: none !important; }
 
   body {
     background: var(--bg);
@@ -441,10 +442,16 @@
     border: none;
     background: transparent;
     padding: 1rem;
+    margin: 0;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
     max-width: 100vw;
     max-height: 100vh;
-    width: 100%;
-    height: 100%;
+    overflow-y: auto;
+  }
+  .edit-modal-overlay[open], .split-modal-overlay[open], .conflict-modal-overlay[open] {
     display: flex; align-items: center; justify-content: center;
   }
   .edit-modal-overlay::backdrop, .split-modal-overlay::backdrop, .conflict-modal-overlay::backdrop {

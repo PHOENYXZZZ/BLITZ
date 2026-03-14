@@ -50,9 +50,9 @@ function addEntry(e) {
   e.id = crypto.randomUUID();
   e._modifiedAt = new Date().toISOString();
   // Duplikat-Check: exakt gleicher Eintrag schon vorhanden?
-  const dupKey = `${e.date}|${e.from}|${e.to}|${String(e.customerName||e.customerId||'')}|${e.task||''}`;
+  const dupKey = `${e.date}|${e.from}|${e.to}|${String(e.customerName||e.customerId||'')}|${e.task||''}|${e.title||''}`;
   const isDup = data.entries.some(x => {
-    return `${x.date}|${x.from}|${x.to}|${String(x.customerName||x.customerId||'')}|${x.task||''}` === dupKey;
+    return `${x.date}|${x.from}|${x.to}|${String(x.customerName||x.customerId||'')}|${x.task||''}|${x.title||''}` === dupKey;
   });
   if (isDup) {
     showToast('Eintrag existiert bereits – nicht erneut hinzugefügt.', 'error');
