@@ -581,7 +581,7 @@ $$;
 DO $$
 BEGIN
   ALTER TABLE profiles ADD CONSTRAINT profiles_code_unique UNIQUE (code);
-EXCEPTION WHEN duplicate_object THEN NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
 END;
 $$;
 
