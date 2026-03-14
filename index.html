@@ -61,7 +61,7 @@
   <div class="pin-setup-hint" id="pinSetupHint"></div>
 </div>
 
-<div class="version-badge">v63</div>
+<div class="version-badge" id="versionBadge">v64</div>
 <div class="container" id="appContainer">
 
   <header>
@@ -69,38 +69,38 @@
       <span class="logo-bolt">⚡</span>
       <h1>BLITZ</h1>
     </div>
-    <span id="headerSyncDot" style="margin-left:auto;font-size:0.65rem;color:var(--muted);cursor:pointer" onclick="showPage('sync');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('syncTab').classList.add('active')" title="Sync-Status"></span>
+    <span id="headerSyncDot" style="margin-left:auto;font-size:0.65rem;color:var(--muted);cursor:pointer" onclick="showPage('sync');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('syncTab').classList.add('active')" title="Sync-Status" aria-live="polite" role="status"></span>
 </header>
 
-  <div class="tabs no-print">
-    <button class="tab active" onclick="showPage('neu')">➕ Neu</button>
-    <button class="tab" onclick="showPage('eintraege')">📋 Einträge</button>
-    <button class="tab" onclick="showPage('uebersicht')">📅 Übersicht</button>
-    <button class="tab" onclick="showPage('mehr')">··· Mehr</button>
-    <button class="tab" id="teamTab" onclick="showPage('team')" style="display:none">👥 Team</button>
-  </div>
+  <nav class="tabs no-print" role="tablist" aria-label="Hauptnavigation">
+    <button class="tab active" role="tab" aria-selected="true" onclick="showPage('neu')">➕ Neu</button>
+    <button class="tab" role="tab" aria-selected="false" onclick="showPage('eintraege')">📋 Einträge</button>
+    <button class="tab" role="tab" aria-selected="false" onclick="showPage('uebersicht')">📅 Übersicht</button>
+    <button class="tab" role="tab" aria-selected="false" onclick="showPage('mehr')">··· Mehr</button>
+    <button class="tab" role="tab" aria-selected="false" id="teamTab" onclick="showPage('team')" style="display:none">👥 Team</button>
+  </nav>
 
   <!-- Mobile Bottom Navigation -->
-  <nav class="bottom-nav no-print">
-    <button class="bottom-nav-item active" id="bnav-neu" onclick="showPage('neu')">
-      <span class="nav-icon">➕</span><span>Neu</span>
+  <nav class="bottom-nav no-print" aria-label="Hauptnavigation">
+    <button class="bottom-nav-item active" id="bnav-neu" onclick="showPage('neu')" aria-label="Neuer Eintrag">
+      <span class="nav-icon" aria-hidden="true">➕</span><span>Neu</span>
     </button>
-    <button class="bottom-nav-item" id="bnav-eintraege" onclick="showPage('eintraege')">
-      <span class="nav-icon">📋</span><span>Einträge</span>
+    <button class="bottom-nav-item" id="bnav-eintraege" onclick="showPage('eintraege')" aria-label="Einträge anzeigen">
+      <span class="nav-icon" aria-hidden="true">📋</span><span>Einträge</span>
     </button>
-    <button class="bottom-nav-item" id="bnav-uebersicht" onclick="showPage('uebersicht')">
-      <span class="nav-icon">📅</span><span>Übersicht</span>
+    <button class="bottom-nav-item" id="bnav-uebersicht" onclick="showPage('uebersicht')" aria-label="Wochenübersicht">
+      <span class="nav-icon" aria-hidden="true">📅</span><span>Übersicht</span>
     </button>
-    <button class="bottom-nav-item" id="bnav-mehr" onclick="showPage('mehr')">
-      <span class="nav-icon">···</span><span>Mehr</span>
+    <button class="bottom-nav-item" id="bnav-mehr" onclick="showPage('mehr')" aria-label="Weitere Optionen">
+      <span class="nav-icon" aria-hidden="true">···</span><span>Mehr</span>
     </button>
-    <button class="bottom-nav-item" id="bnav-team" onclick="showPage('team')" style="display:none">
-      <span class="nav-icon">👥</span><span>Team</span>
+    <button class="bottom-nav-item" id="bnav-team" onclick="showPage('team')" style="display:none" aria-label="Team-Ansicht">
+      <span class="nav-icon" aria-hidden="true">👥</span><span>Team</span>
     </button>
   </nav>
 
   <!-- =================== NEU (Quick Entry) =================== -->
-  <div id="page-neu" class="page active">
+  <section id="page-neu" class="page active" aria-label="Neuer Eintrag">
     <div class="quick-saldo-bar">
       <span id="quickSaldoText">Woche: –</span>
       <span style="font-size:0.65rem;color:var(--muted)" id="quickTodayLabel"></span>
@@ -194,10 +194,10 @@
     </details>
 
     <button class="btn-save-quick" id="btnSaveQuick" onclick="saveQuickEntry()">+ Speichern</button>
-  </div>
+  </section>
 
   <!-- =================== MEHR =================== -->
-  <div id="page-mehr" class="page">
+  <section id="page-mehr" class="page" aria-label="Mehr">
     <div class="mehr-saldo">
       <div class="mehr-saldo-card">
         <div class="mehr-saldo-label">Diese Woche</div>
@@ -260,16 +260,16 @@
         <div class="mehr-card-sub">Excel / Numbers</div>
       </button>
     </div>
-  </div>
+  </section>
 
   <!-- =================== ZEITERFASSUNG =================== -->
-  <div id="page-zeiterfassung" class="page">
+  <section id="page-zeiterfassung" class="page" aria-label="Zeiterfassung">
     <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
 
     <div class="panel panel-accent">
       <div class="live-time" id="liveClock">00:00:00</div>
       <div class="live-date" id="liveDate"></div>
-      <div class="timer-display" id="timerDisplay"></div>
+      <div class="timer-display" id="timerDisplay" aria-live="polite" aria-label="Timer-Anzeige"></div>
 
       <div class="quick-fields" id="timerFields">
         <div class="field">
@@ -410,10 +410,10 @@
       <button class="btn-primary" onclick="addManualEntry()">+ Eintrag hinzufügen</button>
     </div>
 
-  </div>
+  </section>
 
   <!-- =================== EINTRÄGE =================== -->
-  <div id="page-eintraege" class="page">
+  <section id="page-eintraege" class="page" aria-label="Einträge">
 
     <div class="section-header">
       <span class="section-title">Einträge</span>
@@ -458,10 +458,10 @@
       <button class="btn-ghost" onclick="showPDFExportDialog()">⬇ PDF Stundenzettel</button>
     </div>
     <button class="scroll-top-btn no-print" id="scrollTopBtn" onclick="scrollToToday()" title="Zum heutigen Tag">↑</button>
-  </div>
+  </section>
 
   <!-- =================== ÜBERSICHT =================== -->
-  <div id="page-uebersicht" class="page">
+  <section id="page-uebersicht" class="page" aria-label="Übersicht">
 
     <div class="uebersicht-tabs no-print">
       <button class="u-tab active" id="uTab-week" onclick="switchUebersicht('week')">Woche</button>
@@ -502,10 +502,10 @@
       <div id="yearGrid"></div>
     </div>
 
-  </div>
+  </section>
 
   <!-- =================== AUSWERTUNG =================== -->
-  <div id="page-auswertung" class="page">
+  <section id="page-auswertung" class="page" aria-label="Auswertung">
     <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
 
     <div class="panel-title" style="margin-bottom:1rem">Monatsfilter</div>
@@ -521,10 +521,10 @@
       <div class="panel-title">Stunden nach Kunde</div>
       <div class="customer-breakdown" id="customerBreakdown"></div>
     </div>
-  </div>
+  </section>
 
   <!-- =================== STAMMDATEN =================== -->
-  <div id="page-stammdaten" class="page">
+  <section id="page-stammdaten" class="page" aria-label="Stammdaten">
     <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
     <div class="panel">
       <div class="panel-title">Kunden & Standorte verwalten</div>
@@ -571,8 +571,8 @@
         <button class="btn-danger" onclick="removePin()" id="btnRemovePin" style="display:none">PIN entfernen</button>
       </div>
     </div>
-  </div>
-  <div id="page-sync" class="page">
+  </section>
+  <section id="page-sync" class="page" aria-label="Synchronisation">
     <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
     <div id="syncStatusBar" class="sync-status-bar sync-idle">
       <span id="syncStatusIcon">○</span>
@@ -619,9 +619,9 @@
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div id="page-benutzer" class="page">
+  <section id="page-benutzer" class="page" aria-label="Benutzerverwaltung">
     <button class="back-btn" onclick="showPage('mehr')">← Zurück</button>
     <div class="panel">
       <div class="panel-title">Benutzer anlegen</div>
@@ -646,9 +646,9 @@
       <div class="panel-title">Alle Benutzer</div>
       <div id="benutzerList"><div style="color:var(--muted);padding:1rem 0;text-align:center">Lade…</div></div>
     </div>
-  </div>
+  </section>
 
-  <div id="page-team" class="page">
+  <section id="page-team" class="page" aria-label="Team-Übersicht">
     <div class="panel">
       <div class="panel-title">Team-Übersicht</div>
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
@@ -656,7 +656,7 @@
       </div>
       <div id="teamContainer"><div style="color:var(--muted);text-align:center;padding:2rem">Lade…</div></div>
     </div>
-  </div>
+  </section>
 
 </div><!-- /appContainer -->
 
@@ -676,7 +676,7 @@
 <script src="js/app.js"></script>
 
 <!-- EDIT MODAL -->
-<div class="edit-modal-overlay hidden" id="editModalOverlay" onclick="if(event.target===this)closeEditModal()">
+<dialog class="edit-modal-overlay" id="editModalOverlay" onclick="if(event.target===this)closeEditModal()">
   <div class="edit-modal-box">
     <div class="edit-modal-title">Eintrag bearbeiten</div>
     <div class="form-grid">
@@ -743,11 +743,11 @@
       <button class="btn-primary" onclick="saveEditEntry()">Speichern</button>
     </div>
   </div>
-</div>
+</dialog>
 
 
 <!-- =================== SPLIT MODAL =================== -->
-<div class="split-modal-overlay hidden" id="splitModalOverlay" onclick="if(event.target===this)closeSplitModal()">
+<dialog class="split-modal-overlay" id="splitModalOverlay" onclick="if(event.target===this)closeSplitModal()">
   <div class="split-modal-box">
     <div class="split-modal-title">Eintrag aufteilen</div>
     <div class="split-modal-desc">Teile diesen Eintrag in mehrere Abschnitte mit unterschiedlichen Tätigkeiten auf. Die „Bis"-Zeit jedes Abschnitts (außer dem letzten) ist editierbar – sie bestimmt die Grenze zum nächsten Abschnitt.</div>
@@ -762,7 +762,7 @@
       <button class="btn-primary" onclick="confirmSplit()">Aufteilen</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <!-- =================== PDF EXPORT MODAL =================== -->
 <div id="pdfExportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;align-items:center;justify-content:center;padding:1rem;overflow-y:auto">
@@ -814,7 +814,7 @@
 </div>
 
 <!-- =================== CONFLICT MODAL =================== -->
-<div class="conflict-modal-overlay hidden" id="conflictModalOverlay">
+<dialog class="conflict-modal-overlay" id="conflictModalOverlay">
   <div class="conflict-box">
     <div class="conflict-title" id="conflictTitle"></div>
     <div class="conflict-versions" id="conflictVersions"></div>
@@ -824,7 +824,7 @@
     </div>
     <div class="conflict-counter" id="conflictCounter"></div>
   </div>
-</div>
+</dialog>
 
 </body>
 </html>

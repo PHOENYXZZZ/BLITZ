@@ -1,15 +1,10 @@
 
 function renderSaldo() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-  const monday = new Date(today); monday.setDate(today.getDate() - dow);
+  const monday = getMondayOfWeek(today);
 
-  // Current week (exclude vacation entries from totals)
-  const weekMins = data.entries
-    .filter(e => e.date >= isoDate(monday) && e.task !== '__VACATION__')
-    .reduce((s,e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
-  const weekSoll = getWeekSollMins(monday);
-  const weekDiff = weekMins - weekSoll;
+  // Current week
+  const { weekMins, weekSoll, weekDiff } = calcWeekSaldo(monday);
 
   // Current month (exclude vacation entries, use adjusted soll)
   const mStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;

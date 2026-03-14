@@ -30,20 +30,18 @@ function editEntry(id) {
   document.getElementById('editTravelMin').value = e.travelMin || 0;
   document.getElementById('editTravelKm').value = e.travelKm || 0;
 
-  document.getElementById('editModalOverlay').classList.remove('hidden');
+  document.getElementById('editModalOverlay').showModal();
   // Dauer-Vorschau sofort aktualisieren
   updateDurPreview('editFrom','editTo','editBreak','editDurPreview');
 }
 
 function populateEditLocations(customerId, selectedId) {
   const lSel = document.getElementById('editLocation');
-  const locs = customerId ? data.locations.filter(l => l.customerId === customerId) : data.locations;
-  lSel.innerHTML = '<option value="">– Standort –</option>' +
-    locs.map(l => `<option value="${escapeHtml(l.id)}" ${l.id === selectedId ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('');
+  lSel.innerHTML = buildLocationOptions(customerId, selectedId);
 }
 
 function closeEditModal() {
-  document.getElementById('editModalOverlay').classList.add('hidden');
+  document.getElementById('editModalOverlay').close();
   _editId = null;
 }
 
@@ -90,7 +88,7 @@ function saveEditEntry() {
   renderEntries();
   renderSaldo();
   closeEditModal();
-  if (getAutoSyncEnabled()) syncNow();
+  syncNow();
 }
 
 function deleteEntry(id) {
@@ -151,11 +149,11 @@ function openSplitModal(id) {
     (e.task ? `  ·  <span class="entry-task ${taskClass(e.task)}" style="display:inline">${escapeHtml(e.task)}</span>` : '');
 
   renderSplitSegments();
-  document.getElementById('splitModalOverlay').classList.remove('hidden');
+  document.getElementById('splitModalOverlay').showModal();
 }
 
 function closeSplitModal() {
-  document.getElementById('splitModalOverlay').classList.add('hidden');
+  document.getElementById('splitModalOverlay').close();
   _splitParentId = null;
   _splitSegments = [];
 }
@@ -305,5 +303,5 @@ function confirmSplit() {
   renderSaldo();
   closeSplitModal();
   showToast(`✓ In ${n} Segmente aufgeteilt`, 'success');
-  if (getAutoSyncEnabled()) syncNow();
+  syncNow();
 }

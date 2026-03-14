@@ -154,23 +154,14 @@ function populateAllSelects() {
   onManCustomerChange();
 }
 
-function locationOptionsFor(customerId) {
-  const locs = customerId
-    ? data.locations.filter(l => l.customerId === customerId)
-    : data.locations;
-  return '<option value="">– Standort wählen –</option>' +
-    locs.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`).join('') +
-    '<option value="_free_">Freie Eingabe...</option>';
-}
-
 function onTimerCustomerChange() {
   const sel = document.getElementById('timerLocation');
-  if (sel) sel.innerHTML = locationOptionsFor(document.getElementById('timerCustomer').value);
+  if (sel) sel.innerHTML = buildLocationOptions(document.getElementById('timerCustomer').value);
 }
 
 function onManCustomerChange() {
   const sel = document.getElementById('manLocation');
-  if (sel) sel.innerHTML = locationOptionsFor(document.getElementById('manCustomer').value);
+  if (sel) sel.innerHTML = buildLocationOptions(document.getElementById('manCustomer').value);
 }
 
 // ============================================================

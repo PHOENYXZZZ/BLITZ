@@ -147,7 +147,7 @@ DECLARE
   v_uid uuid;
   e jsonb;
 BEGIN
-  SELECT id INTO v_uid FROM profiles WHERE code = p_code;
+  SELECT id INTO v_uid FROM profiles WHERE code = lower(trim(p_code));
   IF v_uid IS NULL THEN RAISE EXCEPTION 'Invalid code'; END IF;
 
   FOR e IN SELECT * FROM jsonb_array_elements(p_entries)
@@ -213,7 +213,7 @@ DECLARE
   cust jsonb;
   loc jsonb;
 BEGIN
-  SELECT id INTO v_user_id FROM profiles WHERE code = p_code;
+  SELECT id INTO v_user_id FROM profiles WHERE code = lower(trim(p_code));
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Unbekannter Code'; END IF;
 
   SET CONSTRAINTS locations_customer_id_fkey DEFERRED;
@@ -264,7 +264,7 @@ DECLARE
   v_user_id uuid;
   cust jsonb;
 BEGIN
-  SELECT id INTO v_user_id FROM profiles WHERE code = p_code;
+  SELECT id INTO v_user_id FROM profiles WHERE code = lower(trim(p_code));
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Unbekannter Code'; END IF;
 
   DELETE FROM customers WHERE user_id = v_user_id;
@@ -290,7 +290,7 @@ DECLARE
   v_user_id uuid;
   loc jsonb;
 BEGIN
-  SELECT id INTO v_user_id FROM profiles WHERE code = p_code;
+  SELECT id INTO v_user_id FROM profiles WHERE code = lower(trim(p_code));
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Unbekannter Code'; END IF;
 
   DELETE FROM locations WHERE user_id = v_user_id;
@@ -321,7 +321,7 @@ AS $$
 DECLARE
   v_user_id uuid;
 BEGIN
-  SELECT id INTO v_user_id FROM profiles WHERE code = p_code;
+  SELECT id INTO v_user_id FROM profiles WHERE code = lower(trim(p_code));
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Unbekannter Code'; END IF;
   RETURN COALESCE((
     SELECT jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name))
@@ -338,7 +338,7 @@ AS $$
 DECLARE
   v_user_id uuid;
 BEGIN
-  SELECT id INTO v_user_id FROM profiles WHERE code = p_code;
+  SELECT id INTO v_user_id FROM profiles WHERE code = lower(trim(p_code));
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Unbekannter Code'; END IF;
   RETURN COALESCE((
     SELECT jsonb_agg(jsonb_build_object('id', l.id, 'customer_id', l.customer_id, 'name', l.name))
@@ -556,5 +556,35 @@ $$;
 
 
 -- ─────────────────────────────────────────────────
---  FERTIG! Alle Funktionen sind auf dem neuesten Stand.
+--  PERFORMANCE: Indexes
+-- ─────────────────────────────────────────────────
+
+CREATE INDEX IF NOT EXISTS idx_entries_user_id ON entries(user_id);
+CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date);
+CREATE INDEX IF NOT EXISTS idx_profiles_code ON profiles(code);
+CREATE INDEX IF NOT EXISTS idx_customers_user_id ON customers(user_id);
+CREATE INDEX IF NOT EXISTS idx_locations_user_id ON locations(user_id);
+
+-- ─────────────────────────────────────────────────
+--  INTEGRITÄT: NOT NULL + Unique Constraints
+-- ─────────────────────────────────────────────────
+
+ALTER TABLE entries ALTER COLUMN user_id SET NOT NULL;
+
+DO $$
+BEGIN
+  ALTER TABLE profiles ALTER COLUMN code SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
+
+DO $$
+BEGIN
+  ALTER TABLE profiles ADD CONSTRAINT profiles_code_unique UNIQUE (code);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────
+--  FERTIG! Alle Funktionen und Indexes sind auf dem neuesten Stand.
 -- ─────────────────────────────────────────────────

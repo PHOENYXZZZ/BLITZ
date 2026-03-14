@@ -173,9 +173,23 @@ async function syncPush(_fromSyncNow = false) {
     // Vor dem Push lokale Duplikate bereinigen
     deduplicateLocalEntries();
     const uid = currentUser.id;
-    // UUID-Migration erfolgt bereits in state.js:load() beim App-Start.
-    // Non-UUID Tombstones filtern (Sicherheitsnetz)
+    // Sicherheitsnetz: Non-UUID-IDs migrieren (z.B. alte Timestamp-IDs vom Server)
+    let needsSave = false;
+    for (const e of data.entries) {
+      if (!isUUID(String(e.id))) { e.id = crypto.randomUUID(); needsSave = true; }
+      if (e.customerId && !isUUID(String(e.customerId))) { e.customerId = null; needsSave = true; }
+      if (e.locationId && !isUUID(String(e.locationId))) { e.locationId = null; needsSave = true; }
+    }
+    for (const c of data.customers) {
+      if (!isUUID(String(c.id))) { c.id = crypto.randomUUID(); needsSave = true; }
+    }
+    for (const l of data.locations) {
+      if (!isUUID(String(l.id))) { l.id = crypto.randomUUID(); needsSave = true; }
+      if (l.customerId && !isUUID(String(l.customerId))) { l.customerId = null; needsSave = true; }
+    }
+    // Non-UUID Tombstones filtern
     data.deletedIds = (data.deletedIds || []).filter(id => isUUID(String(id)));
+    if (needsSave) localStorage.setItem('blitz_v2', JSON.stringify(data));
     // Helper: Nur gültige UUIDs durchlassen, alles andere → null
     // (verhindert "operator does not exist: text = uuid" Fehler)
     const uuidOrNull = v => (v && isUUID(String(v))) ? String(v) : null;
@@ -445,14 +459,14 @@ function showConflictModal(conflicts) {
   _pendingConflicts = conflicts;
   _conflictIdx = 0;
   renderConflict();
-  document.getElementById('conflictModalOverlay').classList.remove('hidden');
+  document.getElementById('conflictModalOverlay').showModal();
 }
 
 function renderConflict() {
   if (_conflictIdx >= _pendingConflicts.length) {
-    document.getElementById('conflictModalOverlay').classList.add('hidden');
+    document.getElementById('conflictModalOverlay').close();
     save();
-    if (getAutoSyncEnabled()) syncPush();
+    syncPush();
     return;
   }
   const c = _pendingConflicts[_conflictIdx];

@@ -67,7 +67,7 @@ function addEntry(e) {
   data.entries.sort((a, b) => (b.date + b.from).localeCompare(a.date + a.from));
   save();
   renderSaldo();
-  if (getAutoSyncEnabled()) syncNow();
+  syncNow();
 }
 
 // deleteEntry + duplicateEntry defined below
@@ -141,20 +141,11 @@ function renderEntries() {
   const filtered = getFilteredEntries();
 
   // Week summary
-  const today = new Date();
-  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-  const monday = new Date(today); monday.setDate(today.getDate() - dow);
-  const mondayStr = isoDate(monday);
-  const weekMins = data.entries.filter(e => e.date >= mondayStr && e.task !== '__VACATION__')
-    .reduce((s, e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
-  const weekSollM = getWeekSollMins(monday);
-  const weekDiffM = weekMins - weekSollM;
-  const diffSign = weekDiffM >= 0 ? '+' : '−';
-  const diffAbs = Math.abs(weekDiffM);
-  const diffStr = `${diffSign}${Math.floor(diffAbs/60)}h${String(diffAbs%60).padStart(2,'0')}m`;
+  const monday = getMondayOfWeek(new Date());
+  const { weekMins, weekDiff: weekDiffM } = calcWeekSaldo(monday);
   const diffCol = weekDiffM > 0 ? 'var(--green)' : weekDiffM < 0 ? 'var(--red)' : 'var(--accent)';
   const el = document.getElementById('weekSummary');
-  if (el) el.innerHTML = `Diese Woche: ${fmtDur(weekMins)} &nbsp;<span style="color:${diffCol};font-size:0.7rem">${diffStr}</span>`;
+  if (el) el.innerHTML = `Diese Woche: ${fmtDur(weekMins)} &nbsp;<span style="color:${diffCol};font-size:0.7rem">${fmtSaldo(weekDiffM)}</span>`;
 
   // Filter chips + summary
   renderFilterChips();

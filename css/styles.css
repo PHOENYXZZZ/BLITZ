@@ -16,6 +16,16 @@
     --radius-sm:6px;
     --radius-lg:16px;
     --icon:     #9a9488;
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --space-xl: 1.5rem;
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.2s ease;
+    --z-modal: 1000;
+    --z-toast: 1100;
+    --z-pin: 1200;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -67,7 +77,7 @@
     color: var(--muted);
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    transition: all 0.15s;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
   }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tab:hover:not(.active) { color: var(--text); }
@@ -178,7 +188,7 @@
     border: 1px solid var(--border);
     border-radius: 2px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
     text-transform: uppercase;
     letter-spacing: 1px;
   }
@@ -257,7 +267,7 @@
     color: var(--muted); font-family: 'DM Mono', monospace;
     font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px;
     padding: 0 1rem; border-radius: 2px; cursor: pointer; white-space: nowrap;
-    min-height: 38px; transition: all 0.15s;
+    min-height: 38px; transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
   }
   .filter-toggle-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,197,71,0.08); }
   .filter-panel { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
@@ -326,7 +336,7 @@
     background: none; border: 1.5px solid var(--icon); color: var(--icon);
     border-radius: 50%; width: 32px; height: 32px; font-size: 0.8rem;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    margin: 0.35rem auto 0; transition: all 0.2s; min-height: unset; padding: 0;
+    margin: 0.35rem auto 0; transition: background-color var(--transition-normal), color var(--transition-normal); min-height: unset; padding: 0;
     -webkit-tap-highlight-color: transparent;
   }
   .transfer-btn:hover { border-color: var(--green); color: var(--green); }
@@ -396,7 +406,7 @@
     cursor: pointer;
     font-size: 1.1rem;
     padding: 0.4rem 0.5rem;
-    transition: all 0.15s;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
     min-height: 36px;
     min-width: 36px;
     display: flex; align-items: center; justify-content: center;
@@ -427,22 +437,19 @@
   .entry-edit:hover { color: var(--accent); border: none; }
   .entry-right { text-align: right; }
 
-  .edit-modal-overlay {
-    position: fixed; inset: 0; z-index: 5000;
+  .edit-modal-overlay, .split-modal-overlay, .conflict-modal-overlay {
+    border: none;
+    background: transparent;
+    padding: 1rem;
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100%;
+    height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .edit-modal-overlay::backdrop, .split-modal-overlay::backdrop, .conflict-modal-overlay::backdrop {
     background: rgba(0,0,0,0.7);
-    display: flex; align-items: center; justify-content: center;
-    padding: 1rem;
   }
-  .edit-modal-overlay.hidden { display: none; }
-
-  /* SPLIT MODAL */
-  .split-modal-overlay {
-    position: fixed; inset: 0; z-index: 5100;
-    background: rgba(0,0,0,0.75);
-    display: flex; align-items: center; justify-content: center;
-    padding: 1rem;
-  }
-  .split-modal-overlay.hidden { display: none; }
   .split-modal-box {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -591,7 +598,7 @@
     text-transform: uppercase; letter-spacing: 1.5px;
     cursor: pointer; border: none; background: none;
     color: var(--muted); border-bottom: 2px solid transparent;
-    margin-bottom: -1px; transition: all 0.15s;
+    margin-bottom: -1px; transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
   }
   .u-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .u-tab:hover:not(.active) { color: var(--text); }
@@ -720,7 +727,7 @@
     font-size: 0.65rem; padding: 0.3rem 0.75rem; border-radius: 4px;
     background: rgba(91,155,213,0.1); color: var(--blue); border: 1px solid var(--blue);
     cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-    transition: all 0.15s; min-height: unset;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast); min-height: unset;
   }
   .btn-vacation-toggle:hover { background: rgba(91,155,213,0.2); }
   .btn-vacation-toggle.remove { background: transparent; color: var(--red); border-color: var(--red); }
@@ -806,7 +813,7 @@
     display: flex; align-items: center; gap: 0.6rem;
     padding: 0.55rem 1rem; border-radius: 2px; margin-bottom: 1.2rem;
     font-size: 0.75rem; border: 1px solid var(--border);
-    transition: all 0.3s;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
   .sync-idle { background: var(--surface); color: var(--muted); }
   .sync-ok { background: rgba(111,207,151,0.1); border-color: var(--green); color: var(--green); }
@@ -1133,7 +1140,7 @@
     background: var(--surface); border: 1px solid var(--border);
     color: var(--muted); font-size: 1.4rem; border-radius: 50%;
     width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.15s; flex-shrink: 0; min-height: unset;
+    cursor: pointer; transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast); flex-shrink: 0; min-height: unset;
     -webkit-tap-highlight-color: transparent;
   }
   .date-nav-btn:hover, .date-nav-btn:active { color: var(--accent); border-color: var(--accent); background: var(--surface2); }
@@ -1221,7 +1228,7 @@
     display: flex; align-items: center; gap: 1rem;
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 1rem 1.1rem; cursor: pointer; text-align: left;
-    color: var(--text); transition: all 0.15s; min-height: unset; width: 100%;
+    color: var(--text); transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast); min-height: unset; width: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'DM Mono', monospace;
   }
@@ -1251,7 +1258,7 @@
     padding: 1.1rem 0.75rem;
     cursor: pointer;
     color: var(--text);
-    transition: all 0.15s;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
     min-height: 88px;
     width: 100%;
     -webkit-tap-highlight-color: transparent;
@@ -1369,7 +1376,7 @@
   .pin-dot {
     width: 14px; height: 14px; border-radius: 50%;
     border: 2px solid var(--border); background: transparent;
-    transition: all 0.15s;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
   }
   .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
   .pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.4s ease; }
@@ -1387,7 +1394,7 @@
     font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 300;
     color: var(--text); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    transition: all 0.1s; -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.1s ease, color 0.1s ease; -webkit-tap-highlight-color: transparent;
     min-height: 72px; min-width: 72px;
   }
   .pin-key:active, .pin-key:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); transform: scale(0.94); }
@@ -1435,7 +1442,7 @@ button:active { transform: scale(0.97); }
 }
 
 /* Modal animations */
-.edit-modal-overlay, .split-modal-overlay {
+.edit-modal-overlay[open], .split-modal-overlay[open], .conflict-modal-overlay[open] {
   animation: overlayFadeIn 0.2s ease-out;
 }
 @keyframes overlayFadeIn {
@@ -1488,14 +1495,6 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Conflict modal */
-.conflict-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.72);
-  z-index: 1100;
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem;
-}
-.conflict-modal-overlay.hidden { display: none; }
 .conflict-box {
   background: var(--surface);
   border-radius: var(--radius-lg);

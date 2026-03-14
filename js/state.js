@@ -72,7 +72,7 @@ function save() {
     console.error('localStorage Quota überschritten:', e);
     return; // Sync nicht triggern wenn Speichern fehlschlägt
   }
-  if (typeof currentUser !== 'undefined' && currentUser && !syncBusy && getAutoSyncEnabled()) {
+  if (typeof currentUser !== 'undefined' && currentUser && !syncBusy) {
     clearTimeout(syncPushTimer);
     syncPushTimer = setTimeout(() => syncNow(), 5000);
   }
@@ -80,12 +80,7 @@ function save() {
 
 load();
 
-// ============================================================
-//  AUTO-SYNC
-// ============================================================
-const AUTO_SYNC_KEY = 'blitz_auto_sync';
-function getAutoSyncEnabled() { return true; }
-function setAutoSyncEnabled(v) { /* no-op – Sync ist immer aktiv */ }
+// Auto-Sync ist immer aktiv (kein Toggle mehr nötig)
 
 // ============================================================
 //  STUNDEN-SALDO (Über-/Minusstunden)
