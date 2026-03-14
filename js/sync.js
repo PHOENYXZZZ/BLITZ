@@ -11,7 +11,7 @@ let _realtimeMasterdataChannel = null;
 let _realtimePauseUntil = 0; // Timestamp-basiert statt Boolean (verhindert Race-Conditions)
 let _syncRetryCount = 0;
 let _syncRetryTimer = null;
-let _lastSyncAt = null; // ISO timestamp des letzten erfolgreichen Pull
+let _lastSyncAt = localStorage.getItem('blitz_last_sync') || null; // ISO timestamp des letzten erfolgreichen Pull
 let _syncQueued = false; // Queue: wenn syncBusy, nach Ende nachholen
 
 function getSupabase() {
@@ -111,15 +111,13 @@ async function loginWithCode() {
     localStorage.setItem('blitz_user_code', code);
     localStorage.setItem('blitz_user_id', profile.id);
     localStorage.setItem('blitz_wochensoll', currentUser.weekly_hours);
-    if (previousUserId === profile.id && (data.entries.length > 0 || data.customers.length > 0)) {
-      // Gleicher User → Offline-Einträge hochladen
-      await syncPush();
-    } else if (previousUserId !== profile.id) {
+    if (previousUserId !== profile.id) {
       // Anderer User → lokalen Cache leeren um Datenvermischung zu verhindern
       data = { entries: [], customers: [], locations: [], deletedIds: [] };
       localStorage.setItem('blitz_v2', JSON.stringify(data));
     }
-    await syncPull();
+    // syncNow: Pull zuerst (Server-Stand holen), dann Push (lokale Offline-Einträge hochladen)
+    await syncNow();
     setupRealtimeSync();
     updateAdminUI();
     updateSyncTab();
@@ -175,20 +173,9 @@ async function syncPush(_fromSyncNow = false) {
     // Vor dem Push lokale Duplikate bereinigen
     deduplicateLocalEntries();
     const uid = currentUser.id;
-    // Alte Timestamp-IDs in UUIDs migrieren (einmalig)
-    let migrated = false;
-    for (const e of data.entries) {
-      if (!isUUID(String(e.id))) { e.id = ensureUUID(e.id); migrated = true; }
-      if (e.customerId && !isUUID(String(e.customerId))) { e.customerId = ensureUUID(e.customerId); migrated = true; }
-      if (e.locationId && !isUUID(String(e.locationId))) { e.locationId = ensureUUID(e.locationId); migrated = true; }
-    }
-    for (const c of data.customers) { if (!isUUID(String(c.id))) { c.id = ensureUUID(c.id); migrated = true; } }
-    for (const l of data.locations) { if (!isUUID(String(l.id))) { l.id = ensureUUID(l.id); migrated = true; } }
-    // Non-UUID Tombstones entfernen (können nicht auf dem Server existieren)
-    // Hinweis: Alte Timestamp-IDs wurden bei Migration durch neue UUIDs ersetzt,
-    // daher sind non-UUID Tombstones ohnehin verwaist und können sicher entfernt werden.
+    // UUID-Migration erfolgt bereits in state.js:load() beim App-Start.
+    // Non-UUID Tombstones filtern (Sicherheitsnetz)
     data.deletedIds = (data.deletedIds || []).filter(id => isUUID(String(id)));
-    if (migrated) localStorage.setItem('blitz_v2', JSON.stringify(data));
     // Helper: Nur gültige UUIDs durchlassen, alles andere → null
     // (verhindert "operator does not exist: text = uuid" Fehler)
     const uuidOrNull = v => (v && isUUID(String(v))) ? String(v) : null;
@@ -223,6 +210,11 @@ async function syncPush(_fromSyncNow = false) {
         p_locations: data.locations.map(l => ({ id: String(l.id), customer_id: uuidOrNull(l.customerId), name: l.name }))
       });
       if (error) throw error;
+    }
+    // Tombstones bereinigen: Server hat die Löschungen verarbeitet
+    if (data.deletedIds && data.deletedIds.length > 0) {
+      data.deletedIds = [];
+      localStorage.setItem('blitz_v2', JSON.stringify(data));
     }
     const ts = new Date().toLocaleTimeString('de-DE');
     setSyncStatus('ok', 'Synchronisiert', `Zuletzt: ${ts}`);
@@ -272,8 +264,8 @@ function deduplicateLocalEntries() {
     return cmp !== 0 ? cmp : String(a.id).localeCompare(String(b.id));
   });
   for (const e of sorted) {
-    // Breiterer Key: Datum + Zeiten + Kunde + Aufgabe (Kern-Identität eines Eintrags)
-    const key = `${e.date}|${e.from}|${e.to}|${String(e.customerName||e.customerId||'')}|${e.task||''}`;
+    // Dedup-Key: Datum + Zeiten + Kunde + Aufgabe + Titel (verhindert Löschung legitimer Einträge)
+    const key = `${e.date}|${e.from}|${e.to}|${String(e.customerName||e.customerId||'')}|${e.task||''}|${e.title||''}`;
     if (seen.has(key)) {
       toDelete.push(e.id);
     } else {
@@ -283,7 +275,8 @@ function deduplicateLocalEntries() {
   if (toDelete.length > 0) {
     data.entries = data.entries.filter(e => !toDelete.includes(e.id));
     data.deletedIds = [...new Set([...(data.deletedIds || []), ...toDelete])];
-    save();
+    // Direktes Speichern ohne save(), um Sync-Trigger-Loop zu vermeiden
+    localStorage.setItem('blitz_v2', JSON.stringify(data));
     showToast(`${toDelete.length} Duplikat${toDelete.length === 1 ? '' : 'e'} bereinigt`);
     return true;
   }
@@ -327,7 +320,7 @@ async function syncPull(_fromSyncNow = false) {
     const seenContent = new Map();
     const dedupedEntries = [];
     for (const e of uniqueEntries) {
-      const key = `${e.date}|${e.from_time}|${e.to_time}|${e.customer_name||''}|${e.task||''}`;
+      const key = `${e.date}|${e.from_time}|${e.to_time}|${e.customer_name||''}|${e.task||''}|${e.title||''}`;
       if (!seenContent.has(key)) {
         seenContent.set(key, e.id);
         dedupedEntries.push(e);
@@ -421,6 +414,7 @@ async function syncPull(_fromSyncNow = false) {
     populateAllSelects();
     renderSyncPage();
     _lastSyncAt = new Date().toISOString();
+    localStorage.setItem('blitz_last_sync', _lastSyncAt);
     const ts = new Date().toLocaleTimeString('de-DE');
     setSyncStatus('ok', 'Synchronisiert', `Zuletzt: ${ts}`);
     const el = document.getElementById('syncLastDown');
@@ -549,7 +543,7 @@ function setupRealtimeSync() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'locations', filter: `user_id=eq.${currentUser.id}` }, _onRealtimeChange)
       .subscribe(); // Fehler still ignorieren — Pull-vor-Push ist der Hauptschutz
-  } catch(e) { _realtimeMasterdataChannel = null; /* Stammdaten-Realtime nicht verfügbar – kein Problem */ }
+  } catch(e) { _realtimeMasterdataChannel = null; console.warn('Stammdaten-Realtime nicht verfügbar:', e); }
 }
 
 function updateAdminUI() {
@@ -563,3 +557,6 @@ function updateAdminUI() {
   if (bnavTeam) bnavTeam.style.display = showTeam ? '' : 'none';
   if (benutzerItem) benutzerItem.style.display = isAdmin ? 'flex' : 'none'; // Nur Admin
 }
+
+// Automatische Resynchronisation bei Netzwerk-Wiederverbindung
+window.addEventListener('online', () => { if (currentUser) syncNow(); });

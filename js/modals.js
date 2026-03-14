@@ -288,7 +288,8 @@ function confirmSplit() {
     user_code: parent.user_code,
     transferred: false,
     travelMin: idx === 0 ? (parent.travelMin || 0) : 0,
-    travelKm: idx === 0 ? (parent.travelKm || 0) : 0
+    travelKm: idx === 0 ? (parent.travelKm || 0) : 0,
+    _modifiedAt: new Date().toISOString()
   }));
 
   // 3. Original löschen + neue Segmente einfügen (ATOMAR in einem save())

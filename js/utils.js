@@ -172,7 +172,8 @@ function addVacationDay(dateStr) {
     title: 'Urlaub',
     customerId: null, customerName: null,
     locationId: null, locationName: null,
-    note: ''
+    note: '',
+    _modifiedAt: new Date().toISOString()
   });
   save();
 }
