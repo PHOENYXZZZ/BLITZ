@@ -94,11 +94,8 @@ function onQuickCustomerChange() {
   _quickCustomerName = cust ? cust.name : '';
 
   // Populate location select with this customer's known locations
-  const locs = data.locations.filter(l => String(l.customerId) === String(val));
   const locSel = document.getElementById('quickLocSel');
-  locSel.innerHTML = '<option value="">– Standort wählen –</option>' +
-    locs.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`).join('') +
-    '<option value="__new__">+ Neuer Standort…</option>';
+  locSel.innerHTML = buildLocationOptions(val, null, true);
   locWrap.style.display = '';
   newLocWrap.style.display = 'none';
 }
@@ -188,30 +185,18 @@ function saveQuickEntry() {
 }
 
 function renderQuickSaldo() {
-  const today = new Date();
-  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-  const monday = new Date(today); monday.setDate(today.getDate() - dow);
-  const weekMins = data.entries.filter(e => e.date >= isoDate(monday) && e.task !== '__VACATION__')
-    .reduce((s,e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
-  const diff = weekMins - getWeekSollMins(monday);
-  const h = Math.floor(weekMins/60), m = weekMins%60;
-  const pad = n => String(n).padStart(2,'0');
-  const sign = diff >= 0 ? '+' : '−';
-  const da = Math.abs(diff);
-  const col = diff >= 0 ? 'var(--green)' : 'var(--red)';
+  const monday = getMondayOfWeek(new Date());
+  const { weekMins, weekDiff } = calcWeekSaldo(monday);
+  const col = weekDiff >= 0 ? 'var(--green)' : 'var(--red)';
   const el = document.getElementById('quickSaldoText');
   if (el) el.innerHTML =
-    `Woche: <strong>${h}h ${pad(m)}m</strong> <span style="color:${col}">${sign}${Math.floor(da/60)}h${pad(da%60)}m</span>`;
+    `Woche: <strong>${fmtDur(weekMins)}</strong> <span style="color:${col}">${fmtSaldo(weekDiff)}</span>`;
 }
 
 function renderMehrSaldo() {
-  // Week (exclude vacation entries)
   const today = new Date(); today.setHours(0,0,0,0);
-  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-  const monday = new Date(today); monday.setDate(today.getDate() - dow);
-  const weekMins = data.entries.filter(e => e.date >= isoDate(monday) && e.task !== '__VACATION__')
-    .reduce((s,e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
-  const weekDiff = weekMins - getWeekSollMins(monday);
+  const monday = getMondayOfWeek(today);
+  const { weekMins, weekDiff } = calcWeekSaldo(monday);
   // Month (exclude vacation entries, use adjusted soll)
   const mStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   const monthMins = data.entries.filter(e => e.date.startsWith(mStr) && e.task !== '__VACATION__')

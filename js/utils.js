@@ -73,6 +73,41 @@ function fmtSaldo(mins) {
 function saldoClass(mins) { return mins > 0 ? 'saldo-plus' : mins < 0 ? 'saldo-minus' : 'saldo-neutral'; }
 
 // ============================================================
+//  SHARED HELPERS
+// ============================================================
+const APP_VERSION = 64;
+const TASK_TYPES = ['Installation', 'Wartung', 'Störung', 'Inbetriebnahme', 'Planung', 'Sonstiges'];
+
+function buildTaskOptions(selected) {
+  return '<option value="">– Tätigkeit wählen –</option>' +
+    TASK_TYPES.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${t}</option>`).join('');
+}
+
+function buildLocationOptions(customerId, selectedId, includeNew = false) {
+  const locs = customerId ? data.locations.filter(l => String(l.customerId) === String(customerId)) : [];
+  return '<option value="">– Standort wählen –</option>' +
+    locs.map(l => `<option value="${escapeHtml(l.id)}" ${l.id === selectedId ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('') +
+    (includeNew ? '<option value="__new__">+ Neuer Standort…</option>' : '');
+}
+
+function calcWeekSaldo(mondayDate) {
+  const mondayStr = isoDate(mondayDate);
+  const weekMins = data.entries
+    .filter(e => e.date >= mondayStr && e.task !== '__VACATION__')
+    .reduce((s, e) => s + calcDuration(e.from, e.to, e.breakMin).total, 0);
+  const weekSoll = getWeekSollMins(mondayDate);
+  return { weekMins, weekSoll, weekDiff: weekMins - weekSoll };
+}
+
+function getMondayOfWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  d.setDate(d.getDate() - dow);
+  return d;
+}
+
+// ============================================================
 //  TASK COLOR
 // ============================================================
 function taskClass(task) {

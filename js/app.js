@@ -16,8 +16,10 @@ function showPage(id) {
   pageEl.style.animation = '';
   // Desktop tabs
   [...document.querySelectorAll('.tab')].forEach(t => {
-    if (t.getAttribute('onclick')?.includes(`'${id}'`)) t.classList.add('active');
-    if (MEHR_PAGES.has(id) && t.getAttribute('onclick')?.includes("'mehr'")) t.classList.add('active');
+    const isActive = t.getAttribute('onclick')?.includes(`'${id}'`) ||
+      (MEHR_PAGES.has(id) && t.getAttribute('onclick')?.includes("'mehr'"));
+    if (isActive) t.classList.add('active');
+    t.setAttribute('aria-selected', isActive ? 'true' : 'false');
   });
   // Bottom nav
   const navId = MEHR_PAGES.has(id) ? 'mehr' : id;
