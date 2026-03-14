@@ -295,7 +295,7 @@ function updateVacationSettings(key, value) {
 function duplicateEntry(id) {
   const e = data.entries.find(x => String(x.id) === String(id));
   if (!e) return;
-  const copy = { ...e, id: crypto.randomUUID(), date: isoDate(new Date()) };
+  const copy = { ...e, id: crypto.randomUUID(), date: isoDate(new Date()), _modifiedAt: new Date().toISOString() };
   data.entries.unshift(copy);
   save();
   renderEntries();
