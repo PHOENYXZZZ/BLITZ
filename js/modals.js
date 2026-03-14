@@ -3,6 +3,12 @@
 let _editId = null;
 let _deleteTimers = {};
 
+// Backdrop-Klick schließt Dialoge (native <dialog> feuert click auf dem Element selbst)
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'editModalOverlay') closeEditModal();
+  if (e.target.id === 'splitModalOverlay') closeSplitModal();
+});
+
 function editEntry(id) {
   const e = data.entries.find(x => String(x.id) === String(id));
   if (!e) return;

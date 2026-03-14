@@ -515,9 +515,10 @@ async function syncNow() {
     await syncPush(true);
   } catch (e) {
     setSyncStatus('error', 'Sync fehlgeschlagen: ' + e.message);
+  } finally {
+    syncBusy = false;
+    _realtimePauseUntil = Math.max(_realtimePauseUntil, Date.now() + 3000);
   }
-  syncBusy = false;
-  _realtimePauseUntil = Date.now() + 3000;
   // Warteschlange abarbeiten (z.B. Realtime-Event während Sync)
   if (_syncQueued) {
     _syncQueued = false;

@@ -56,14 +56,11 @@ function hideTimerBanner() {
 }
 
 let _lastSyncTs = 0;
-// Zentrale Funktion: Push-then-Pull wenn Tab/App wieder aktiv wird
-// Push zuerst, damit lokale Einträge nicht beim Pull verloren gehen
+// Zentrale Funktion: Pull-then-Push wenn Tab/App wieder aktiv wird
 async function syncOnResume() {
   if (!currentUser || syncBusy || Date.now() - _lastSyncTs < 60000) return;
   _lastSyncTs = Date.now();
-  // Erst pushen (damit pending-Einträge auf den Server kommen), dann pullen
-  await syncPush();
-  await syncPull();
+  await syncNow(); // Pull zuerst, dann Push (konsistent mit syncNow)
 }
 
 document.addEventListener('visibilitychange', () => {

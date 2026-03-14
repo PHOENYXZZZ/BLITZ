@@ -75,7 +75,7 @@ function saldoClass(mins) { return mins > 0 ? 'saldo-plus' : mins < 0 ? 'saldo-m
 // ============================================================
 //  SHARED HELPERS
 // ============================================================
-const APP_VERSION = 64;
+const APP_VERSION = 65;
 const TASK_TYPES = ['Installation', 'Wartung', 'Störung', 'Inbetriebnahme', 'Planung', 'Sonstiges'];
 
 function buildTaskOptions(selected) {

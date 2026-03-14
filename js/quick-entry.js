@@ -169,6 +169,8 @@ function saveQuickEntry() {
   document.getElementById('quickDuration').innerHTML = '&nbsp;';
   document.getElementById('quickTitle').value = '';
   document.getElementById('quickNote').value  = '';
+  document.getElementById('quickBreak').value = '0';
+  document.getElementById('quickTask').value  = '';
   const quickLocSel = document.getElementById('quickLocSel');
   if (quickLocSel) quickLocSel.value = '';
   document.getElementById('quickNewLocWrap').style.display = 'none';
