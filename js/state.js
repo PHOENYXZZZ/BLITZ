@@ -62,7 +62,16 @@ function load() {
 }
 let syncPushTimer;
 function save() {
-  localStorage.setItem('blitz_v2', JSON.stringify(data));
+  try {
+    localStorage.setItem('blitz_v2', JSON.stringify(data));
+  } catch (e) {
+    // QuotaExceededError: localStorage voll (5MB Limit)
+    if (typeof showToast === 'function') {
+      showToast('Speicher voll! Bitte alte Einträge exportieren und löschen.', 'error');
+    }
+    console.error('localStorage Quota überschritten:', e);
+    return; // Sync nicht triggern wenn Speichern fehlschlägt
+  }
   if (typeof currentUser !== 'undefined' && currentUser && !syncBusy && getAutoSyncEnabled()) {
     clearTimeout(syncPushTimer);
     syncPushTimer = setTimeout(() => syncNow(), 5000);

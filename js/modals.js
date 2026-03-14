@@ -291,17 +291,14 @@ function confirmSplit() {
     travelKm: idx === 0 ? (parent.travelKm || 0) : 0
   }));
 
-  newEntries.forEach(e => data.entries.unshift(e));
-  data.entries.sort((a, b) => (b.date + b.from).localeCompare(a.date + a.from));
-  save(); // Checkpoint 1: neue Einträge gesichert
-
-  // 3. Original löschen
+  // 3. Original löschen + neue Segmente einfügen (ATOMAR in einem save())
   const originalId = _splitParentId;
-  const originalIndex = data.entries.findIndex(x => String(x.id) === String(originalId));
-  if (originalIndex !== -1) data.entries.splice(originalIndex, 1);
+  data.entries = data.entries.filter(x => String(x.id) !== String(originalId));
   if (!data.deletedIds) data.deletedIds = [];
   if (!data.deletedIds.includes(originalId)) data.deletedIds.push(originalId);
-  save(); // Checkpoint 2: Original gelöscht
+  newEntries.forEach(e => data.entries.unshift(e));
+  data.entries.sort((a, b) => (b.date + b.from).localeCompare(a.date + a.from));
+  save(); // Atomar: Löschen + Einfügen in einem Schritt
 
   renderEntries();
   renderSaldo();
